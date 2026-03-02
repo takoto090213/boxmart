@@ -179,14 +179,14 @@
     <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4 text-center shrink-0">
       <div class="text-sm text-blue-800 mb-1">現在の空き枠</div>
       <div class="text-4xl font-extrabold text-blue-600" id="home-empty-slots">- / 10</div>
-      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※空き枠3以上で補充可能</div>
+      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※検証用（空き枠は目安）</div>
       <div class="mt-3 text-xs text-gray-600" id="home-eta-line">-</div>
     </div>
 
     <div class="space-y-3 shrink-0">
       <button onclick="App.navigate('restock-intro')" id="btn-home-restock"
               class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-sm flex justify-between items-center px-6 disabled:bg-gray-300 disabled:text-gray-500 transition">
-        <span>📦 補充</span><span class="text-xl">→</span>
+        <span>🛍️ 持ち出し</span><span class="text-xl">→</span>
       </button>
       <button onclick="App.navigate('shipment')"
               class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition">
@@ -215,18 +215,18 @@
 
   <!-- B1: Restock intro -->
   <div id="screen-restock-intro" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4 shrink-0">補充をリクエスト</h2>
+    <h2 class="text-xl font-bold mb-4 shrink-0">持ち出し（購入確定）</h2>
     <div class="bg-white border rounded-lg p-4 mb-6 text-sm text-gray-700 space-y-3">
       <p class="font-bold">やることは2つだけ</p>
       <ol class="list-decimal pl-5 text-gray-700 space-y-1">
-        <li>箱に「今ある商品」を順番にスキャン</li>
-        <li>最後に「確定」</li>
+        <li>箱から取った商品をスキャン</li>
+        <li>内容を確認して「購入確定」</li>
       </ol>
       <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
         <p class="font-bold mb-1">ポイント</p>
         <ul class="list-disc pl-5 space-y-1">
-          <li>スキャンされなかった枠は「使った」とみなされ、空き分が補充されます。</li>
-          <li>スキャンは「箱に今あるものだけ」でOKです。</li>
+          <li>取った商品だけスキャンしてください（箱に残っている商品はスキャンしません）。</li>
+          <li>読み取りが違う場合は、購入確定せずに戻ってもう一度スキャンしてください。</li>
         </ul>
       </div>
       <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700">
@@ -242,7 +242,7 @@
     <div class="mt-auto sticky" style="bottom: calc(90px + env(safe-area-inset-bottom));">
       <div class="bg-white/95 backdrop-blur border rounded-xl p-3 shadow-sm">
         <button onclick="App.startScanMode('restock')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md">
-          QRをスキャンして補充する
+          QRをスキャンして購入確定へ
         </button>
         <p class="text-[11px] text-gray-500 text-center mt-2">※タップすると背面カメラが起動します</p>
       </div>
@@ -267,7 +267,7 @@
     </div>
     <div class="flex justify-between items-center mb-2 shrink-0">
       <h2 class="text-lg font-bold" id="scan-title">スキャン</h2>
-      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 確認済</div>
+      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 登録済</div>
     </div>
 
     <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 220px;">
@@ -309,9 +309,9 @@
     </div>
 
     <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700 mb-3 shrink-0">
-      <div class="font-bold mb-1">スキャンのコツ</div>
+      <div class="font-bold mb-1">持ち出しのコツ</div>
       <ul class="list-disc pl-5 space-y-1">
-        <li>枠（1〜10）をタップして、どこに入っている商品かを選んでからスキャン</li>
+        <li>取った商品をスキャンしてください（枠は検証用のメモです）</li>
         <li>同じQRを2回スキャンしても「重複」として弾きます</li>
       </ul>
     </div>
@@ -321,7 +321,7 @@
     <div class="sticky-action">
       <button id="btn-scan-confirm" onclick="App.confirmScan()"
               class="w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0" disabled>
-        すべて確認して確定
+        購入確定
       </button>
     </div>
   </div>
@@ -330,19 +330,19 @@
   <div id="screen-restock-result" class="screen p-4 justify-center">
     <div class="text-center mb-6 shrink-0">
       <div class="text-5xl mb-2">✅</div>
-      <h2 class="text-2xl font-bold text-gray-800">補充を確定しました</h2>
+      <h2 class="text-2xl font-bold text-gray-800">購入を確定しました</h2>
       <p class="text-sm text-gray-500 mt-2" id="result-bundle-msg"></p>
     </div>
 
     <div class="bg-white border rounded-xl p-5 shadow-sm mb-6 shrink-0">
-      <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">今回の便の請求確定額</h3>
+      <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">今回の購入金額（記録）</h3>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between">
           <span class="text-gray-600">商品代 (<span id="result-items-count">0</span>点)</span>
           <span class="font-bold" id="result-items-price">¥0</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-600">補充手数料</span>
+          <span class="text-gray-600">サービス料</span>
           <span class="font-bold" id="result-fee">¥0</span>
         </div>
         <div class="flex justify-between">
@@ -354,7 +354,7 @@
           <span class="text-2xl font-extrabold text-blue-600" id="result-total">¥0</span>
         </div>
       </div>
-      <p class="text-xs text-gray-400 mt-3 text-center">※ご登録のクレジットカードへ請求されます（検証用ダミー）</p>
+      <p class="text-xs text-gray-400 mt-3 text-center">※検証用：実際の請求は発生しません（記録のみ）</p>
     </div>
 
     <button onclick="App.navigate('home')" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl mt-4 shrink-0">ホームへ戻る</button>
@@ -372,7 +372,7 @@
     <h2 class="text-xl font-bold mb-4 shrink-0">月末締めスキャン</h2>
     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-800 space-y-3 shrink-0">
       <p class="font-bold">⚠️ 月に1度の在庫確認です</p>
-      <p>毎月末、実際に家にある商品の数を確定させるためのスキャンです。未実施の場合、翌月の補充が停止されます。</p>
+      <p>毎月末、実際に家にある商品の数を確定させるためのスキャンです。未実施の場合、翌月の利用が停止されます。</p>
     </div>
     <div class="flex-1 flex flex-col justify-end">
       <button onclick="App.startScanMode('endofmonth')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md mt-4 shrink-0">締めスキャンを開始</button>
@@ -393,7 +393,7 @@
 
     <div class="bg-white border rounded-xl p-4 mb-4">
       <p class="text-sm text-gray-600 mb-3">
-        発送に必要な情報です。入力内容はこの端末に保存され、補充/締めスキャン送信データにも含まれます。
+        発送に必要な情報です。入力内容はこの端末に保存され、持ち出し/締めスキャン送信データにも含まれます。
       </p>
 
       <div class="space-y-3">
@@ -422,7 +422,7 @@
         </div>
 
         <div class="pt-2">
-          <button onclick="App.saveAccountToStorage()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">
+          <button onclick="App.saveAccount()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">
             保存する
           </button>
           <p id="acc-saved-msg" class="text-[11px] text-green-700 text-center mt-2 hidden">保存しました</p>
@@ -465,7 +465,7 @@
       <span class="nav-icon">🏠</span><span>ホーム</span>
     </button>
     <button class="nav-item" onclick="App.navigate('restock-intro')" id="nav-restock">
-      <span class="nav-icon">📦</span><span>補充</span>
+      <span class="nav-icon">🛍️</span><span>持ち出し</span>
     </button>
     <button class="nav-item" onclick="App.navigate('shipment')" id="nav-shipment">
       <span class="nav-icon">🚚</span><span>次回便</span>
@@ -497,6 +497,18 @@ function getUserId() {
   }
   return id;
 }
+
+function hash32FNV1a(str){
+  // 32-bit FNV-1a hash (fast, deterministic) -> hex string
+  let h = 0x811c9dc5;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
 
 function loadAccount() {
   try {
@@ -661,24 +673,24 @@ document.getElementById('scan-error').classList.add('hidden');
 
     if (this.state.data.status === 'suspended') {
       btnRestock.disabled = true;
-      condEl.textContent = '月末締め未実施のため補充停止中（まず月末締めへ）';
+      condEl.textContent = '月末締め未実施のため利用停止中（まず月末締めへ）';
       condEl.classList.add('text-red-600');
-      this.updateBadge('補充停止中', 'bg-red-500 text-white');
+      this.updateBadge('利用停止中', 'bg-red-500 text-white');
       document.getElementById('home-account-status').innerHTML = '<span class="text-red-500">停止中（要月末締め）</span>';
       document.getElementById('eom-alert').classList.remove('hidden');
     } else if (emptyCount < CONFIG.MIN_RESTOCK_SLOTS) {
       btnRestock.disabled = true;
       const need = CONFIG.MIN_RESTOCK_SLOTS - emptyCount;
-      condEl.textContent = `補充できません：空き枠が足りません（あと${need}枠必要）`;
+      condEl.textContent = `持ち出しは可能ですが、空き枠が少ない状態です（あと${need}枠必要）`;
       condEl.classList.remove('text-red-600');
-      this.updateBadge('補充不可(枠不足)', 'bg-gray-200 text-gray-700');
+      this.updateBadge('持ち出し不可', 'bg-gray-200 text-gray-700');
       document.getElementById('home-account-status').textContent = '正常';
       document.getElementById('eom-alert').classList.add('hidden');
     } else {
       btnRestock.disabled = false;
-      condEl.textContent = '補充リクエストできます（空き枠が3以上）';
+      condEl.textContent = '持ち出し（購入確定）を記録できます';
       condEl.classList.remove('text-red-600');
-      this.updateBadge('補充OK', 'bg-green-500 text-white');
+      this.updateBadge('利用中', 'bg-green-500 text-white');
       document.getElementById('home-account-status').textContent = '正常';
       document.getElementById('eom-alert').classList.add('hidden');
     }
@@ -704,7 +716,7 @@ document.getElementById('scan-error').classList.add('hidden');
     this.scanBuffer = Array(CONFIG.BOX_CAPACITY).fill(null);
     this.currentScanTarget = 0;
 
-    document.getElementById('scan-title').textContent = mode === 'restock' ? '補充スキャン' : '月末締めスキャン';
+    document.getElementById('scan-title').textContent = mode === 'restock' ? '持ち出し（購入確定）' : '月末締めスキャン';
     document.getElementById('btn-scan-confirm').disabled = true;
 
     this.navigate('scan');
@@ -759,13 +771,21 @@ document.getElementById('scan-error').classList.add('hidden');
       grid.appendChild(el);
     });
 
-    document.getElementById('scan-progress').textContent = `${confirmedCount}/${CONFIG.BOX_CAPACITY} 確認済`;
+    document.getElementById('scan-progress').textContent = `${confirmedCount}/${CONFIG.BOX_CAPACITY} 登録済`;
 
     const btnConfirm = document.getElementById('btn-scan-confirm');
     if (confirmedCount === CONFIG.BOX_CAPACITY) {
       btnConfirm.disabled = false;
       btnConfirm.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
-      btnConfirm.classList.add('bg-bluasync initScanner() {
+      btnConfirm.classList.add('bg-blue-600', 'text-white', 'cursor-pointer');
+    } else {
+      btnConfirm.disabled = true;
+      btnConfirm.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+      btnConfirm.classList.remove('bg-blue-600', 'text-white', 'cursor-pointer');
+    }
+  },
+
+  async initScanner() {
     document.getElementById('scan-error').classList.add('hidden');
     document.getElementById('scan-overlay').classList.remove('hidden');
 
@@ -902,19 +922,16 @@ document.getElementById('scan-error').classList.add('hidden');
   },
 
   showScanError(err) {
+    const msg = String(err && err.message ? err.message : err);
+    this.updateScanDebug({ error: msg });
+
     document.getElementById('scan-overlay').classList.add('hidden');
     const el = document.getElementById('scan-error');
-    if (el) {
-      el.classList.remove('hidden');
-      el.textContent = 'カメラを起動できませんでした。HTTPS環境か、カメラの権限設定を確認してください。';
-    }
+    if (el) el.classList.remove('hidden');
+
     // debugパネルがあれば追記
     if (typeof this.debugLog === 'function') {
-      this.debugLog('scanner_error', String(err && err.message ? err.message : err));
-    }
-  } this.updateScanDebug({ error: String(err && err.message ? err.message : err) });
-      document.getElementById('scan-overlay').classList.add('hidden');
-      document.getElementById('scan-error').classList.remove('hidden');
+      this.debugLog('scanner_error', msg);
     }
   },
 
@@ -934,84 +951,162 @@ document.getElementById('scan-error').classList.add('hidden');
         this.lastDecodedText = text;
         this.lastDecodedAt = nowMs;
 
-        this.updateScanDebug({ raw: String(text).slice(0, 240), parsed: "-", error: "-" });
+        const s = String(text || "").trim();
+        this.updateScanDebug({ raw: s.slice(0, 240), parsed: "-", error: "-" });
 
         this.playBeep();
 
-        const regex = /^BOXMART:ITEM=([a-zA-Z0-9_-]+):SIG=([a-zA-Z0-9_-]+)$/;
-        const match = String(text || "").match(regex);
+        // --- QR parse (official / external) ---
+        let itemId = null;
+        let sig = null;
+        let qrKind = "unknown";
 
-        if (!match) {
-            this.showToast("無効なQRコードです", "error");
-            this.updateScanDebug({ error: "invalid_format" });
+        // Official BOXMART format
+        const m1 = s.match(/^BOXMART:ITEM=([a-zA-Z0-9_-]+):SIG=([a-zA-Z0-9_-]+)$/);
+        if (m1) {
+            itemId = m1[1];
+            sig = m1[2];
+            qrKind = "boxmart";
+        } else {
+            // External/test QR: extract SKU***(-**) from any text (e.g., Google Lens generated QR)
+            const m2 = s.match(/SKU\d{3}(?:-\d{2})?/i);
+            if (m2) {
+                itemId = m2[0].toUpperCase();
+                sig = "EXT_" + hash32FNV1a(s);
+                qrKind = "external_sku";
+            }
+        }
+
+        if (!itemId || !sig) {
+            this.showToast("無効なQRコードです（BOXMART形式ではありません）", "error");
+            this.updateScanDebug({ raw: s.slice(0, 240), error: "invalid_format" });
+
+            // GAS: invalid scan (diagnosis)
+            try {
+                await this.postToGAS({
+                    type: "scan_invalid",
+                    mode: this.scanMode,
+                    slot: this.currentScanTarget + 1,
+                    item_id: "",
+                    sig: "",
+                    raw: s,
+                    note: "invalid_format"
+                }, this.isDebug);
+            } catch (e) {}
+
             await this.restartScannerSoon();
             this.scanBusy = false;
             return;
         }
 
-        const itemId = match[1];
-        const sig = match[2];
+        // Debug view: show what was parsed
+        this.updateScanDebug({ raw: s.slice(0, 240), parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "-" });
 
-        this.updateScanDebug({ parsed: `item= sig=`, error: "-" });
-
-        const isDuplicate = this.scanBuffer.some((val, idx) =>
+        // Duplicate by SIG
+        const dupIdx = this.scanBuffer.findIndex((val, idx) =>
             idx !== this.currentScanTarget && val && val !== "empty" && val.sig === sig
         );
-        if (isDuplicate) {
-            this.showToast("重複です（別の枠で登録済み）", "error");
-            this.updateScanDebug({ parsed: `item= sig=`, error: "duplicate" });
-            await this.restartScannerSoon();
-            this.scanBusy = false;
-            return;
+
+        if (dupIdx >= 0) {
+            const other = this.scanBuffer[dupIdx];
+
+            // If same SIG but different ITEM => QR generation bug (SIG collision). Auto-fix SIG so you can proceed.
+            if (other && other.id && other.id !== itemId) {
+                sig = (sig + "_ALT_" + hash32FNV1a(s)).slice(0, 64);
+                qrKind = qrKind + "|sig_collision_fixed";
+                this.updateScanDebug({ parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "sig_collision_fixed" });
+            } else {
+                this.showToast(`重複です（枠${dupIdx + 1}で登録済み）`, "error");
+                this.updateScanDebug({ parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "duplicate" });
+
+                // GAS: duplicate scan (diagnosis)
+                try {
+                    await this.postToGAS({
+                        type: "scan_duplicate",
+                        mode: this.scanMode,
+                        slot: this.currentScanTarget + 1,
+                        item_id: itemId,
+                        sig: sig,
+                        raw: s,
+                        note: `dup_of_${dupIdx + 1}|${qrKind}`
+                    }, this.isDebug);
+                } catch (e) {}
+
+                await this.restartScannerSoon();
+                this.scanBusy = false;
+                return;
+            }
         }
 
+        // Save to current slot
         this.scanBuffer[this.currentScanTarget] = { id: itemId, sig: sig };
 
-// Immediate UI feedback
-const rawInfo = this.isDebug ? ` / RAW=${String(text).slice(0,80)}` : "";
-this.showToast(`枠${this.currentScanTarget+1}に登録しました: ${itemId}${rawInfo}`, "success");
+        // GAS: per-scan log (this is the key fix so rows appear immediately)
+        try {
+            await this.postToGAS({
+                type: "scan_item",
+                mode: this.scanMode,
+                slot: this.currentScanTarget + 1,
+                item_id: itemId,
+                sig: sig,
+                raw: s,
+                note: qrKind
+            }, this.isDebug);
+        } catch (e) {}
 
-// First reflect scanned slot, then auto-select next unconfirmed slot
-this.renderScanGrid();
-this.moveToNextEmptyTarget();
-this.renderScanGrid();
+        // Immediate UI feedback
+        const rawInfo = this.isDebug ? ` / RAW=${s.slice(0, 80)}` : "";
+        this.showToast(`枠${this.currentScanTarget + 1}に登録しました: ${itemId}${rawInfo}`, "success");
 
+        // Reflect scanned slot, then auto-select next unconfirmed slot
+        this.renderScanGrid();
+        this.moveToNextUnconfirmedTarget();
+        this.renderScanGrid();
+
+        // Hard restart to avoid “sticky” decode on iOS / native detector
         await this.restartScannerSoon();
         this.scanBusy = false;
     },
 
     async restartScannerSoon() {
-    // Safer restart for iOS Safari: stop -> start (do NOT clear() or destroy instance)
-    if (this.currentScreen !== "scan") return;
-    try {
-      if (this.html5Qrcode && this.html5Qrcode.isScanning) {
-        await this.html5Qrcode.stop();
-      }
-    } catch (e) {
-      // ignore
-    }
-    // reset duplicate guard so a new frame can be read
-    this.lastDecodedText = null;
-    this.lastDecodedAt = 0;
-    this.scanBusy = false;
-
-    // restart shortly to let camera pipeline refresh
-    setTimeout(async () => {
+      // Hard restart for both Native BarcodeDetector and html5-qrcode
       if (this.currentScreen !== "scan") return;
+
+      // Prevent restart storms
+      if (this._restartInFlight) return;
+      this._restartInFlight = true;
+
+      // Reset guards
+      this.lastDecodedText = null;
+      this.lastDecodedAt = 0;
+      this.scanBusy = false;
+
+      // Stop scanners (native/html5)
+      try { await this.stopAnyScanner(); } catch (e) {}
+
+      // Fully refresh camera pipeline (important on iOS where the video frame can "stick")
       try {
-        if (!this.html5Qrcode) this.html5Qrcode = new Html5Qrcode("reader");
-        await this.html5Qrcode.start(
-          { facingMode: "environment" },
-          { fps: 5, disableFlip: true, aspectRatio: 1.7777778, experimentalFeatures: { useBarCodeDetectorIfSupported: true } },
-          (decodedText) => this.onCodeScanned(decodedText),
-          () => {}
-        );
-      } catch (e) {
-        console.error(e);
-        this.showToast("カメラの再起動に失敗しました。ページを再読み込みしてください。", "error");
-      }
-    }, 250);
-  },
+        if (this.nativeStream) {
+          this.nativeStream.getTracks().forEach(t => { try { t.stop(); } catch(e) {} });
+        }
+      } catch (e) {}
+      this.nativeStream = null;
+      this.nativeVideoEl = null;
+      this.nativeDetector = null;
+      this.nativeLastText = '';
+      this.nativeLastAt = 0;
+      this.nativeTickAt = 0;
+
+      // Restart shortly to let camera pipeline refresh
+      setTimeout(async () => {
+        try {
+          if (this.currentScreen !== "scan") return;
+          await this.initScanner();
+        } finally {
+          this._restartInFlight = false;
+        }
+      }, 450);
+    },
 
   markCurrentAsEmpty() {
     const fixedSlot = this.currentScanTarget;
@@ -1100,7 +1195,7 @@ this.renderScanGrid();
   processRestock() {
     const emptyCount = this.scanBuffer.filter(v => v === 'empty').length;
     if (emptyCount === 0) {
-      alert('空き枠がありません。補充は不要です。');
+      alert('空き枠がありません。追加は不要です。');
       this.navigate('home');
       return;
     }
@@ -1255,7 +1350,7 @@ this.renderScanGrid();
   renderShipment() {
     const top = document.getElementById('shipment-eta-top');
     const eta = this.getEtaIfRestockNow();
-    top.textContent = eta ? eta : '補充すると、ここに「いつ届くか」が表示されます。';
+    top.textContent = eta ? eta : '在庫追加すると、ここに「いつ届くか」が表示されます。';
 
     const content = document.getElementById('shipment-content');
     const pendingShipments = this.state.data.shipments.filter(s => s.status === 'pending');
@@ -1263,7 +1358,7 @@ this.renderScanGrid();
     if (pendingShipments.length === 0) {
       content.innerHTML = `
         <div class="bg-gray-50 border rounded-xl p-8 text-center text-gray-500">
-          現在、発送予定の便はありません。<br>補充をリクエストすると便が作成されます。
+          現在、発送予定の便はありません。<br>持ち出し（購入確定）を記録すると履歴が残ります。
         </div>`;
       return;
     }
@@ -1289,11 +1384,11 @@ this.renderScanGrid();
           : '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold">同梱可能（締切前）</span>';
 
         const bundleMsg = !isDeadlinePassed
-          ? `<p class="text-sm text-green-600 mt-2 font-bold">✓ 今補充するとこの便に同梱されます（追加送料/手数料なし）</p>`
-          : `<p class="text-sm text-red-500 mt-2 font-bold">※締切後：今補充すると次の便になります</p>`;
+          ? `<p class="text-sm text-green-600 mt-2 font-bold">✓ 今在庫追加するとこの便に同梱されます（追加送料/手数料なし）</p>`
+          : `<p class="text-sm text-red-500 mt-2 font-bold">※締切後：今在庫追加すると次の便になります</p>`;
 
         const countMsg = (shipmentsThisMonthCount >= 3)
-          ? `<div class="bg-blue-50 text-blue-800 text-xs p-2 mt-2 rounded">今月3回目以降の補充は、追加便を出さず「次回便にまとめて発送」します。</div>`
+          ? `<div class="bg-blue-50 text-blue-800 text-xs p-2 mt-2 rounded">今月3回目以降の在庫追加は、追加便を出さず「次回便にまとめて発送」します。</div>`
           : '';
 
         html += `
@@ -1350,6 +1445,20 @@ saveAccount() {
   }
 
   this.postToGAS({ type: 'account_saved', mode: 'settings', note: 'account_saved' }, true);
+},
+
+resetData() {
+  const ok = confirm('この端末のデータ（在庫・便・アカウント）を初期化します。よろしいですか？');
+  if (!ok) return;
+
+  try {
+    localStorage.removeItem('boxmart_data');
+    localStorage.removeItem(STORAGE_KEY_ACCOUNT);
+    localStorage.removeItem(STORAGE_KEY_USERID);
+    localStorage.removeItem('boxmart_uid'); // 診断スクリプトで使っているID
+  } catch (e) {}
+
+  location.reload();
 },
 
 async sendTestPing() {
@@ -1544,29 +1653,38 @@ window.onload = () => { App.init(); };
     return t.includes(text);
   }
 
-  function intercept(ev){
-    if(!isSettingsActive()) return;
-    const target=ev.target;
-    if(matchesButton(target,'送信テスト')){
-      ev.preventDefault();
-      ev.stopPropagation();
-      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-      pingOnce();
-      return;
+
+  // --- Settings buttons: direct binding (avoid global capture issues) ---
+  function bindSettingsButtons(){
+    const btnSave = document.getElementById('btn-save');
+    const btnPing = document.getElementById('btn-ping');
+    const btnReset = document.getElementById('btn-reset');
+    if(btnSave){
+      btnSave.addEventListener('click', async (e)=>{
+        // If settings screen isn't active, ignore (safety)
+        if(!isSettingsActive()) return;
+        await saveAccount();
+      }, {passive:true});
     }
-    if(matchesButton(target,'保存する')){
-      ev.preventDefault();
-      ev.stopPropagation();
-      if(ev.stopImmediatePropagation) ev.stopImmediatePropagation();
-      saveOnce();
-      return;
+    if(btnPing){
+      btnPing.addEventListener('click', async (e)=>{
+        if(!isSettingsActive()) return;
+        await sendPing();
+      }, {passive:true});
+    }
+    if(btnReset){
+      btnReset.addEventListener('click', (e)=>{
+        if(!isSettingsActive()) return;
+        resetDevice();
+      }, {passive:true});
     }
   }
 
-  document.addEventListener('click', intercept, true);
-  document.addEventListener('touchend', intercept, true);
 
-  document.addEventListener('DOMContentLoaded', ()=>{
+document.addEventListener('DOMContentLoaded', ()=>{
+  // v48: bind settings buttons
+  bindSettingsButtons();
+
     ensureStatus();
     const s=document.getElementById('screen-settings');
     if(s && !s.querySelector('#btn-diag-v28')){
