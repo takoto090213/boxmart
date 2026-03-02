@@ -1,0 +1,1703 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>BOXMART <span style="font-size:12px;color:#94a3b8;font-weight:800;">v26</span> - ミニストア</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      background-color: #f3f4f6;
+      color: #1f2937;
+      margin: 0;
+      padding: 0;
+      overscroll-behavior-y: none;
+    }
+    .app-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background-color: #ffffff;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 0 15px rgba(0,0,0,0.05);
+      position: relative;
+      overflow: hidden;
+    }
+    .screen {
+      display: none;
+      flex: 1 1 auto;
+      flex-direction: column;
+      min-height: 0; /* IMPORTANT: allow flex child to scroll */
+      padding-bottom: calc(240px + env(safe-area-inset-bottom));
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .screen.active { display: flex; }
+
+    .box-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+    }
+    .box-item {
+      border: 2px solid #e5e7eb;
+      border-radius: 0.5rem;
+      padding: 1rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      user-select: none;
+    }
+    .box-item.active {
+      border-color: #3b82f6;
+      background-color: #eff6ff;
+    }
+    .box-item.scanned {
+      border-color: #10b981;
+      background-color: #ecfdf5;
+    }
+    .box-item.empty {
+      border-color: #9ca3af;
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+
+    /*
+      iOS/Safari 対策：html5-qrcode が生成する video/canvas が
+      下のグリッドのタップを「食う」ことがありました。
+      ここでスキャナー領域を“固定高さの箱”に閉じ込め、タップが下の枠に届くようにします。
+    */
+    #reader {
+      width: 100%;
+      border-radius: 0.75rem;
+      overflow: visible !important;
+      background: #000;
+      height: 220px;           /* ★固定高さ */
+      max-height: 220px;
+      position: relative;      /* ★子要素の基準 */
+      touch-action: none;
+    }
+    #reader video,
+    #reader canvas {
+      width: 100% !important;
+      height: 220px !important;
+      max-height: 220px !important;
+      object-fit: cover;
+      position: static !important;  /* ★fixed/absolute を潰す */
+    }
+    /* html5-qrcode の余計なUIを非表示（下の要素のタップ事故を減らす） */
+    #reader__dashboard_section,
+    #reader__dashboard_section_csr {
+      display: none !important;
+    }
+
+    /* 枠のタップ精度を上げる */
+    .box-item { touch-action: manipulation; }
+
+    .sticky-action {
+      position: sticky;
+      bottom: calc(92px + env(safe-area-inset-bottom));
+      z-index: 30;
+      background: rgba(255,255,255,0.96);
+      backdrop-filter: blur(6px);
+      padding-top: 10px;
+      padding-bottom: 10px;
+    }
+
+    .bottom-nav {
+      position: absolute;
+      bottom: 0; left: 0;
+      width: 100%;
+      background: white;
+      border-top: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-around;
+      padding: 0.5rem 0;
+      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
+      z-index: 50;
+    
+            pointer-events: auto;
+        }
+    .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.5rem;
+      color: #6b7280;
+      font-size: 0.75rem;
+      width: 25%;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+    }
+    .nav-item.active { color: #3b82f6; font-weight: bold; }
+    .nav-icon { font-size: 1.25rem; margin-bottom: 2px; }
+
+    /* iOS: prevent double-tap zoom on buttons */
+    button { touch-action: manipulation; }
+  
+        /* QRガイド（見えない問題の保険：常に上に表示） */
+        .qr-guide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
+        .qr-guide-box{width:220px;height:220px;border:3px solid rgba(255,255,255,.25);border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.08);}
+        .qr-guide-corner{position:absolute;width:26px;height:26px;border-color:rgba(255,255,255,.95);border-style:solid;}
+        .qr-guide-corner.tl{border-width:4px 0 0 4px;top:calc(50% - 110px - 2px);left:calc(50% - 110px - 2px);border-top-left-radius:8px;}
+        .qr-guide-corner.tr{border-width:4px 4px 0 0;top:calc(50% - 110px - 2px);right:calc(50% - 110px - 2px);border-top-right-radius:8px;}
+        .qr-guide-corner.bl{border-width:0 0 4px 4px;bottom:calc(50% - 110px - 2px);left:calc(50% - 110px - 2px);border-bottom-left-radius:8px;}
+        .qr-guide-corner.br{border-width:0 4px 4px 0;bottom:calc(50% - 110px - 2px);right:calc(50% - 110px - 2px);border-bottom-right-radius:8px;}
+
+        /* トースト */
+        #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));background:rgba(17,24,39,.95);color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:700;z-index:9999;max-width:92%;text-align:center;display:none;}
+
+
+#reader video { object-fit: contain !important; }
+</style>
+</head>
+<body>
+
+<div class="app-container">
+  <header class="bg-white px-4 py-3 border-b flex justify-between items-center z-40 shrink-0">
+    <h1 class="text-xl font-bold tracking-tight text-blue-600">BOXMART</h1>
+    <div id="status-badge" class="px-2 py-1 rounded text-xs font-bold">状態取得中...</div>
+  </header>
+
+  <!-- A: Home -->
+  <div id="screen-home" class="screen active p-4">
+    <h2 class="text-lg font-bold mb-4 shrink-0">現在の状況</h2>
+
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4 text-center shrink-0">
+      <div class="text-sm text-blue-800 mb-1">現在の空き枠</div>
+      <div class="text-4xl font-extrabold text-blue-600" id="home-empty-slots">- / 10</div>
+      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※検証用（空き枠は目安）</div>
+      <div class="mt-3 text-xs text-gray-600" id="home-eta-line">-</div>
+    </div>
+
+    <div class="space-y-3 shrink-0">
+      <button onclick="App.navigate('restock-intro')" id="btn-home-restock"
+              class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-sm flex justify-between items-center px-6 disabled:bg-gray-300 disabled:text-gray-500 transition">
+        <span>🛍️ 持ち出し</span><span class="text-xl">→</span>
+      </button>
+      <button onclick="App.navigate('shipment')"
+              class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition">
+        <span>🚚 次回便の確認</span><span class="text-xl">→</span>
+      </button>
+      <button onclick="App.navigate('endofmonth-intro')" id="btn-home-eom"
+              class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition relative">
+        <span>🗓 月末締め</span>
+        <span class="hidden absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4" id="eom-alert">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
+        </span>
+        <span class="text-xl">→</span>
+      </button>
+    </div>
+
+    <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200 shrink-0">
+      <h3 class="font-bold text-gray-700 mb-2">サマリー</h3>
+      <ul class="text-sm space-y-2 text-gray-600">
+        <li class="flex justify-between"><span>次回発送予定:</span> <span id="home-next-date" class="font-bold">-</span></li>
+        <li class="flex justify-between"><span>同梱締切:</span> <span id="home-deadline" class="font-bold text-red-500">-</span></li>
+        <li class="flex justify-between"><span>アカウント状態:</span> <span id="home-account-status" class="font-bold">-</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- B1: Restock intro -->
+  <div id="screen-restock-intro" class="screen p-4">
+    <h2 class="text-xl font-bold mb-4 shrink-0">持ち出し（購入確定）</h2>
+    <div class="bg-white border rounded-lg p-4 mb-6 text-sm text-gray-700 space-y-3">
+      <p class="font-bold">やることは2つだけ</p>
+      <ol class="list-decimal pl-5 text-gray-700 space-y-1">
+        <li>箱から取った商品をスキャン</li>
+        <li>内容を確認して「購入確定」</li>
+      </ol>
+      <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
+        <p class="font-bold mb-1">ポイント</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>取った商品だけスキャンしてください（箱に残っている商品はスキャンしません）。</li>
+          <li>読み取りが違う場合は、購入確定せずに戻ってもう一度スキャンしてください。</li>
+        </ul>
+      </div>
+      <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700">
+        <p class="font-bold mb-1">カメラが起動しないとき</p>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>iPhoneは<strong>HTTPS</strong>のサイトでないとカメラが使えません。</li>
+          <li>ブラウザのカメラ許可をONにしてください。</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 画面下に常に見えるCTA（ナビの上に固定） -->
+    <div class="mt-auto sticky" style="bottom: calc(90px + env(safe-area-inset-bottom));">
+      <div class="bg-white/95 backdrop-blur border rounded-xl p-3 shadow-sm">
+        <button onclick="App.startScanMode('restock')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md">
+          QRをスキャンして購入確定へ
+        </button>
+        <p class="text-[11px] text-gray-500 text-center mt-2">※タップすると背面カメラが起動します</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scan screen -->
+  <div id="screen-scan" class="screen p-4">
+    <!-- Debug panel (visible only when ?debug=1) -->
+    <div id="scan-debug" class="hidden mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
+      <div class="font-bold mb-1">DEBUG</div>
+      <div class="space-y-1">
+        <div><span class="font-semibold">isScanning:</span> <span id="dbg-scanning">-</span></div>
+        <div><span class="font-semibold">RAW:</span> <span id="dbg-raw" class="break-all">-</span></div>
+        <div><span class="font-semibold">Parsed:</span> <span id="dbg-parsed">-</span></div>
+        <div><span class="font-semibold">Last error:</span> <span id="dbg-error">-</span></div>
+      </div>
+      <div class="mt-2 flex gap-2">
+        <button type="button" id="btn-debug-restart" class="flex-1 rounded-md bg-white border border-gray-300 px-3 py-2 font-bold">スキャナ再起動</button>
+        <button type="button" id="btn-debug-clear" class="flex-1 rounded-md bg-white border border-gray-300 px-3 py-2 font-bold">ログ消去</button>
+      </div>
+    </div>
+    <div class="flex justify-between items-center mb-2 shrink-0">
+      <h2 class="text-lg font-bold" id="scan-title">スキャン</h2>
+      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 登録済</div>
+    </div>
+
+    <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 220px;">
+      <div id="reader"></div>
+            <div class="qr-guide" aria-hidden="true">
+                <div class="qr-guide-box"></div>
+                <div class="qr-guide-corner tl"></div>
+                <div class="qr-guide-corner tr"></div>
+                <div class="qr-guide-corner bl"></div>
+                <div class="qr-guide-corner br"></div>
+            </div>
+
+      <div id="scan-overlay" class="absolute inset-0 flex flex-col gap-3 items-center justify-center text-white bg-black bg-opacity-60 hidden z-10 p-4">
+        <div class="text-center text-sm leading-relaxed">
+          <div class="font-bold mb-1">カメラ準備中…</div>
+          <div class="text-xs text-gray-200">許可ダイアログが出たら「許可」を押してください</div>
+        </div>
+        <button onclick="App.retryScanner()" class="bg-white text-black font-bold px-4 py-2 rounded-lg">もう一度カメラ起動</button>
+      </div>
+
+      <div id="scan-error" class="absolute inset-0 hidden z-10 p-4 bg-black bg-opacity-70 text-white">
+        <div class="text-center">
+          <div class="text-lg font-bold mb-2">カメラを起動できません</div>
+          <div class="text-xs text-gray-200 mb-4">
+            iPhoneは<strong>HTTPS</strong>が必要です。<br>
+            例：Netlify / GitHub Pages などで公開して開いてください。
+          </div>
+          <div class="flex gap-2 justify-center">
+            <button onclick="App.retryScanner()" class="bg-white text-black font-bold px-4 py-2 rounded-lg">再試行</button>
+            <button onclick="App.manualInputCode()" class="bg-gray-800 border border-gray-600 text-white font-bold px-4 py-2 rounded-lg">手入力</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex gap-2 mb-3 shrink-0">
+      <button onclick="App.markCurrentAsEmpty()" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-bold text-sm">この枠は「空」</button>
+      <button onclick="App.manualInputCode()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold text-sm">コード手入力</button>
+    </div>
+
+    <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700 mb-3 shrink-0">
+      <div class="font-bold mb-1">持ち出しのコツ</div>
+      <ul class="list-disc pl-5 space-y-1">
+        <li>取った商品をスキャンしてください（枠は検証用のメモです）</li>
+        <li>同じQRを2回スキャンしても「重複」として弾きます</li>
+      </ul>
+    </div>
+
+    <div class="box-grid mb-6 shrink-0" id="scan-grid"></div>
+
+    <div class="sticky-action">
+      <button id="btn-scan-confirm" onclick="App.confirmScan()"
+              class="w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0" disabled>
+        購入確定
+      </button>
+    </div>
+  </div>
+
+  <!-- B3: Restock result -->
+  <div id="screen-restock-result" class="screen p-4 justify-center">
+    <div class="text-center mb-6 shrink-0">
+      <div class="text-5xl mb-2">✅</div>
+      <h2 class="text-2xl font-bold text-gray-800">購入を確定しました</h2>
+      <p class="text-sm text-gray-500 mt-2" id="result-bundle-msg"></p>
+    </div>
+
+    <div class="bg-white border rounded-xl p-5 shadow-sm mb-6 shrink-0">
+      <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">今回の購入金額（記録）</h3>
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between">
+          <span class="text-gray-600">商品代 (<span id="result-items-count">0</span>点)</span>
+          <span class="font-bold" id="result-items-price">¥0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-600">サービス料</span>
+          <span class="font-bold" id="result-fee">¥0</span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-gray-600">送料 (<span id="result-shipping-region"></span>)</span>
+          <span class="font-bold" id="result-shipping-cost">¥0</span>
+        </div>
+        <div class="border-t pt-2 mt-2 flex justify-between items-end">
+          <span class="font-bold text-gray-800">合計</span>
+          <span class="text-2xl font-extrabold text-blue-600" id="result-total">¥0</span>
+        </div>
+      </div>
+      <p class="text-xs text-gray-400 mt-3 text-center">※検証用：実際の請求は発生しません（記録のみ）</p>
+    </div>
+
+    <button onclick="App.navigate('home')" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl mt-4 shrink-0">ホームへ戻る</button>
+  </div>
+
+  <!-- C: Shipment -->
+  <div id="screen-shipment" class="screen p-4">
+    <h2 class="text-xl font-bold mb-4 shrink-0">次回便の状況</h2>
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 mb-3 shrink-0" id="shipment-eta-top">-</div>
+    <div id="shipment-content" class="shrink-0"></div>
+  </div>
+
+  <!-- D1: End of month intro -->
+  <div id="screen-endofmonth-intro" class="screen p-4">
+    <h2 class="text-xl font-bold mb-4 shrink-0">月末締めスキャン</h2>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-800 space-y-3 shrink-0">
+      <p class="font-bold">⚠️ 月に1度の在庫確認です</p>
+      <p>毎月末、実際に家にある商品の数を確定させるためのスキャンです。未実施の場合、翌月の利用が停止されます。</p>
+    </div>
+    <div class="flex-1 flex flex-col justify-end">
+      <button onclick="App.startScanMode('endofmonth')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md mt-4 shrink-0">締めスキャンを開始</button>
+    </div>
+  </div>
+
+  <!-- D3: End of month result -->
+  <div id="screen-endofmonth-result" class="screen p-4 justify-center text-center">
+    <div class="text-5xl mb-4 shrink-0">🎉</div>
+    <h2 class="text-2xl font-bold text-gray-800 mb-2 shrink-0">月末締め完了</h2>
+    <p class="text-gray-600 mb-8 shrink-0">在庫の確認が完了しました。<br>引き続きBOXMARTをご利用いただけます。</p>
+    <button onclick="App.navigate('home')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md shrink-0">ホームへ戻る</button>
+  </div>
+
+  <!-- E: Settings -->
+  <div id="screen-settings" class="screen p-4">
+    <h2 class="text-xl font-bold mb-4">アカウント設定</h2>
+
+    <div class="bg-white border rounded-xl p-4 mb-4">
+      <p class="text-sm text-gray-600 mb-3">
+        発送に必要な情報です。入力内容はこの端末に保存され、持ち出し/締めスキャン送信データにも含まれます。
+      </p>
+
+      <div class="space-y-3">
+        <div>
+          <label class="text-xs font-bold text-gray-600">お名前</label>
+          <input id="acc-name" type="text" placeholder="例）山田 太郎"
+            class="mt-1 w-full border rounded-lg px-3 py-3 text-base" />
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600">郵便番号</label>
+          <input id="acc-zip" type="text" inputmode="numeric" placeholder="例）0600000"
+            class="mt-1 w-full border rounded-lg px-3 py-3 text-base" />
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600">住所</label>
+          <textarea id="acc-address" rows="3" placeholder="例）北海道札幌市〇〇区〇〇 1-2-3"
+            class="mt-1 w-full border rounded-lg px-3 py-3 text-base"></textarea>
+        </div>
+
+        <div>
+          <label class="text-xs font-bold text-gray-600">電話番号</label>
+          <input id="acc-phone" type="tel" inputmode="tel" placeholder="例）09012345678"
+            class="mt-1 w-full border rounded-lg px-3 py-3 text-base" />
+        </div>
+
+        <div class="pt-2">
+          <button onclick="App.saveAccount()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">
+            保存する
+          </button>
+          <p id="acc-saved-msg" class="text-[11px] text-green-700 text-center mt-2 hidden">保存しました</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-gray-50 border rounded-xl p-4">
+      <h3 class="font-bold text-sm text-gray-700 mb-2">連携状況</h3>
+      <div class="text-xs text-gray-600 break-all mb-3">
+        送信先（固定）:<br>
+        <span class="font-mono" id="gas-url-fixed"></span>
+      </div>
+      <div class="text-xs text-gray-600 mb-3">
+        端末ユーザーID:<br>
+        <span class="font-mono" id="device-user-id"></span>
+      </div>
+
+      <button onclick="App.sendTestPing()" class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-3 rounded-lg">
+        送信テスト（ping）
+      </button>
+      <p class="text-[11px] text-gray-500 text-center mt-2">
+        ※数秒後にスプレッドシート（scan_log）に行が追加されます
+      </p>
+    </div>
+
+    <div class="mt-6">
+      <button onclick="App.resetData()" class="w-full bg-red-100 text-red-700 font-bold py-3 rounded-xl">
+        この端末のデータを初期化
+      </button>
+      <p class="text-[11px] text-gray-500 text-center mt-2">
+        ※検証用（在庫・便・アカウント情報が消えます）
+      </p>
+    </div>
+  </div>
+
+  <!-- Bottom nav -->
+  <nav class="bottom-nav">
+    <button class="nav-item active" onclick="App.navigate('home')" id="nav-home">
+      <span class="nav-icon">🏠</span><span>ホーム</span>
+    </button>
+    <button class="nav-item" onclick="App.navigate('restock-intro')" id="nav-restock">
+      <span class="nav-icon">🛍️</span><span>持ち出し</span>
+    </button>
+    <button class="nav-item" onclick="App.navigate('shipment')" id="nav-shipment">
+      <span class="nav-icon">🚚</span><span>次回便</span>
+    </button>
+    <button class="nav-item" onclick="App.navigate('settings')" id="nav-settings">
+      <span class="nav-icon">⚙️</span><span>設定</span>
+    </button>
+  </nav>
+    <div id="toast"></div>
+</div>
+
+<script>
+/**
+ * ---------------------------------------------------------
+ * 設定値
+ * ---------------------------------------------------------
+ */
+/** ---------------------------------------
+ * Account (localStorage)
+ * --------------------------------------*/
+const STORAGE_KEY_ACCOUNT = 'boxmart_account';
+const STORAGE_KEY_USERID = 'boxmart_user_id';
+
+function getUserId() {
+  let id = localStorage.getItem(STORAGE_KEY_USERID);
+  if (!id) {
+    id = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    localStorage.setItem(STORAGE_KEY_USERID, id);
+  }
+  return id;
+}
+
+function hash32FNV1a(str){
+  // 32-bit FNV-1a hash (fast, deterministic) -> hex string
+  let h = 0x811c9dc5;
+  const s = String(str || "");
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+
+function loadAccount() {
+  try {
+    return JSON.parse(localStorage.getItem(STORAGE_KEY_ACCOUNT)) || { name:'', zip:'', address:'', phone:'' };
+  } catch {
+    return { name:'', zip:'', address:'', phone:'' };
+  }
+}
+
+function saveAccountToStorage(acc) {
+  localStorage.setItem(STORAGE_KEY_ACCOUNT, JSON.stringify({
+    name: acc.name || '',
+    zip: acc.zip || '',
+    address: acc.address || '',
+    phone: acc.phone || ''
+  }));
+}
+
+const CONFIG = {
+    GAS_WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec', // スプレッドシート連携（固定）
+  BOX_CAPACITY: 10,
+  MIN_RESTOCK_SLOTS: 3,
+  SHIPPING_INTERVAL_DAYS: 5,
+  MAX_SHIPMENTS_PER_MONTH: 2,
+  FEE_RESTOCK: 550,
+  SHIPPING_REGION: '関東信越',
+  SHIPPING_COST: 1500,
+  ITEM_AVG_PRICE: 600,
+
+  // スプレッドシート送信（GAS WebApp URLは設定画面で保存）
+  DEFAULT_USER_ID: 'test_user_001'
+};
+
+/**
+ * ---------------------------------------------------------
+ * AppState
+ * ---------------------------------------------------------
+ */
+class AppState {
+  constructor() {
+    this.data = this.load();
+  }
+  load() {
+    const raw = localStorage.getItem('boxmart_data');
+    if (raw) return JSON.parse(raw);
+    return {
+      status: 'active',
+      lastEndOfMonthScan: null,
+      inventory: Array(CONFIG.BOX_CAPACITY).fill(null),
+      shipments: []
+    };
+  }
+  save() { localStorage.setItem('boxmart_data', JSON.stringify(this.data)); }
+  getEmptyCount() { return this.data.inventory.filter(i => i === null).length; }
+  checkEndOfMonthRule() {
+    // MVP: ここでは自動停止の強制はしない（手動で状態は作れる）
+  }
+}
+
+/**
+ * ---------------------------------------------------------
+ * Main App
+ * ---------------------------------------------------------
+ */
+window.App = {
+  state: new AppState(),
+  currentScreen: 'home',
+  scanMode: null,               // 'restock' | 'endofmonth'
+  scanBuffer: [],
+  currentScanTarget: 0,
+  html5Qrcode: null,
+    // Native BarcodeDetector (iOS向けの安定化)
+    useNativeDetector: false,
+    nativeDetector: null,
+    nativeStream: null,
+    nativeVideoEl: null,
+    nativeRaf: null,
+    nativeLastText: '',
+    nativeLastAt: 0,
+    nativeTickAt: 0,
+    scanBusy: false,
+    lastDecodedText: null,
+    lastDecodedAt: 0,
+  lastScanAt: 0,
+
+  init() {
+    this.state.checkEndOfMonthRule();
+    this.renderHome();
+    this.isDebug = (new URLSearchParams(window.location.search).get('debug') === '1');
+
+    window.addEventListener('popstate', () => {
+      this.navigate('home', false);
+    });
+  },
+
+  // Debug helper (only active with ?debug=1)
+  updateScanDebug({ raw = null, parsed = null, error = null } = {}) {
+    if (!this.isDebug) return;
+    const panel = document.getElementById("scan-debug");
+    if (panel) panel.classList.remove("hidden");
+    const elScanning = document.getElementById("dbg-scanning");
+    const elRaw = document.getElementById("dbg-raw");
+    const elParsed = document.getElementById("dbg-parsed");
+    const elErr = document.getElementById("dbg-error");
+    try {
+      if (elScanning) elScanning.textContent = (this.html5Qrcode && this.html5Qrcode.isScanning) ? "true" : "false";
+    } catch (e) {
+      if (elScanning) elScanning.textContent = "unknown";
+    }
+    if (raw !== null && elRaw) elRaw.textContent = String(raw);
+    if (parsed !== null && elParsed) elParsed.textContent = String(parsed);
+    if (error !== null && elErr) elErr.textContent = String(error);
+  },
+
+
+  // Navigation
+  navigate(screenId, pushState = true) {
+    // Stop any scanner when leaving scan
+    this.stopAnyScanner && this.stopAnyScanner();
+document.getElementById('scan-error').classList.add('hidden');
+    document.getElementById('scan-overlay').classList.add('hidden');
+      this.updateScanDebug({ error: "-" });
+
+    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+    const scr = document.getElementById(`screen-${screenId}`);
+    if (scr) scr.classList.add('active');
+
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+    const navMap = { 'home':'nav-home', 'restock-intro':'nav-restock', 'shipment':'nav-shipment', 'settings':'nav-settings' };
+    if (navMap[screenId]) document.getElementById(navMap[screenId]).classList.add('active');
+
+    this.currentScreen = screenId;
+
+    if (screenId === 'home') this.renderHome();
+    this.isDebug = (new URLSearchParams(window.location.search).get('debug') === '1');
+    if (screenId === 'shipment') this.renderShipment();
+    if (screenId === 'settings') this.renderSettings();
+
+    if (pushState) history.pushState({ screen: screenId }, '', `#${screenId}`);
+
+    if (scr) scr.scrollTop = 0;
+  },
+
+  // Badge
+  updateBadge(text, classes) {
+    const badge = document.getElementById('status-badge');
+    badge.className = `px-2 py-1 rounded text-xs font-bold ${classes}`;
+    badge.textContent = text;
+  },
+
+  // Home render
+  renderHome() {
+    const emptyCount = this.state.getEmptyCount();
+    document.getElementById('home-empty-slots').textContent = `${emptyCount} / ${CONFIG.BOX_CAPACITY}`;
+
+    const btnRestock = document.getElementById('btn-home-restock');
+    const condEl = document.getElementById('home-restock-condition');
+
+    // Determine ETA line (what happens if you restock now)
+    const eta = this.getEtaIfRestockNow();
+    document.getElementById('home-eta-line').textContent = eta ? eta : '';
+
+    if (this.state.data.status === 'suspended') {
+      btnRestock.disabled = true;
+      condEl.textContent = '月末締め未実施のため利用停止中（まず月末締めへ）';
+      condEl.classList.add('text-red-600');
+      this.updateBadge('利用停止中', 'bg-red-500 text-white');
+      document.getElementById('home-account-status').innerHTML = '<span class="text-red-500">停止中（要月末締め）</span>';
+      document.getElementById('eom-alert').classList.remove('hidden');
+    } else if (emptyCount < CONFIG.MIN_RESTOCK_SLOTS) {
+      btnRestock.disabled = true;
+      const need = CONFIG.MIN_RESTOCK_SLOTS - emptyCount;
+      condEl.textContent = `持ち出しは可能ですが、空き枠が少ない状態です（あと${need}枠必要）`;
+      condEl.classList.remove('text-red-600');
+      this.updateBadge('持ち出し不可', 'bg-gray-200 text-gray-700');
+      document.getElementById('home-account-status').textContent = '正常';
+      document.getElementById('eom-alert').classList.add('hidden');
+    } else {
+      btnRestock.disabled = false;
+      condEl.textContent = '持ち出し（購入確定）を記録できます';
+      condEl.classList.remove('text-red-600');
+      this.updateBadge('利用中', 'bg-green-500 text-white');
+      document.getElementById('home-account-status').textContent = '正常';
+      document.getElementById('eom-alert').classList.add('hidden');
+    }
+
+    // next shipment + deadline (avoid past dates)
+    const nextShipment = this.getNextShipment(true);
+    if (nextShipment) {
+      document.getElementById('home-next-date').textContent = this.formatDate(nextShipment.scheduledDate);
+      const deadline = new Date(nextShipment.scheduledDate);
+      deadline.setDate(deadline.getDate() - 1);
+      document.getElementById('home-deadline').textContent = `${this.formatDate(deadline)} 23:59`;
+    } else {
+      document.getElementById('home-next-date').textContent = '予定なし';
+      document.getElementById('home-deadline').textContent = '-';
+    }
+  },
+
+  // ---------------------------------------
+  // Scan
+  // ---------------------------------------
+  startScanMode(mode) {
+    this.scanMode = mode;
+    this.scanBuffer = Array(CONFIG.BOX_CAPACITY).fill(null);
+    this.currentScanTarget = 0;
+
+    document.getElementById('scan-title').textContent = mode === 'restock' ? '持ち出し（購入確定）' : '月末締めスキャン';
+    document.getElementById('btn-scan-confirm').disabled = true;
+
+    this.navigate('scan');
+    this.renderScanGrid();
+
+    if (this.isDebug) {
+      const p = document.getElementById('scan-debug');
+      if (p) p.classList.remove('hidden');
+      const btnR = document.getElementById('btn-debug-restart');
+      const btnC = document.getElementById('btn-debug-clear');
+      if (btnR) btnR.onclick = async () => {
+        this.showToast('スキャナを再起動します', 'info');
+        await this.restartScannerSoon();
+        this.updateScanDebug({ error: '-' });
+      };
+      if (btnC) btnC.onclick = () => {
+        this.updateScanDebug({ raw: '-', parsed: '-', error: '-' });
+        this.showToast('DEBUGログを消去しました', 'success');
+      };
+      this.updateScanDebug({ raw: '-', parsed: '-', error: '-' });
+    }
+
+    // IMPORTANT: start camera only after user gesture (this is called by a button)
+    this.initScanner();
+  },
+
+  renderScanGrid() {
+    const grid = document.getElementById('scan-grid');
+    grid.innerHTML = '';
+    let confirmedCount = 0;
+
+    this.scanBuffer.forEach((val, idx) => {
+      const el = document.createElement('div');
+      let content = `<div class="font-bold text-gray-400 text-xl">${idx + 1}</div><div class="text-xs text-gray-400">未確認</div>`;
+      el.className = 'box-item';
+
+      if (idx === this.currentScanTarget) el.classList.add('active');
+
+      if (val === 'empty') {
+        el.classList.add('empty');
+        content = `<div class="font-bold text-gray-500 text-xl">${idx + 1}</div><div class="text-xs font-bold">空</div>`;
+        confirmedCount++;
+      } else if (val && typeof val === 'object') {
+        el.classList.add('scanned');
+        const label = (val.itemId || val.id || '').toString();
+        content = `<div class="font-bold text-green-600 text-xl">${idx + 1}</div><div class="text-xs font-bold w-full text-green-700">${label}</div>`;
+        confirmedCount++;
+      }
+
+      el.innerHTML = content;
+      el.onclick = () => { this.currentScanTarget = idx; this.renderScanGrid(); };
+      grid.appendChild(el);
+    });
+
+    document.getElementById('scan-progress').textContent = `${confirmedCount}/${CONFIG.BOX_CAPACITY} 登録済`;
+
+    const btnConfirm = document.getElementById('btn-scan-confirm');
+    if (confirmedCount === CONFIG.BOX_CAPACITY) {
+      btnConfirm.disabled = false;
+      btnConfirm.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+      btnConfirm.classList.add('bg-blue-600', 'text-white', 'cursor-pointer');
+    } else {
+      btnConfirm.disabled = true;
+      btnConfirm.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+      btnConfirm.classList.remove('bg-blue-600', 'text-white', 'cursor-pointer');
+    }
+  },
+
+  async initScanner() {
+    document.getElementById('scan-error').classList.add('hidden');
+    document.getElementById('scan-overlay').classList.remove('hidden');
+
+    // まず既存スキャナを止める（安全）
+    await this.stopAnyScanner();
+
+    // iPhone/Safariでhtml5-qrcodeが反応しない場合があるため、
+    // BarcodeDetectorが使える環境ではネイティブ検出を優先
+    this.useNativeDetector = !!(window.BarcodeDetector && typeof window.BarcodeDetector === 'function');
+
+    try {
+      if (this.useNativeDetector) {
+        await this.startNativeBarcodeDetector();
+      } else {
+        await this.startHtml5QrcodeScanner();
+      }
+      document.getElementById('scan-overlay').classList.add('hidden');
+    } catch (err) {
+      console.error(err);
+      this.showScanError(err);
+    }
+  },
+
+  async stopAnyScanner() {
+    // html5-qrcode 停止
+    try {
+      if (this.html5Qrcode && this.html5Qrcode.isScanning) {
+        await this.html5Qrcode.stop();
+      }
+    } catch (e) {}
+
+    // Native 停止
+    try { await this.stopNativeBarcodeDetector(); } catch (e) {}
+  },
+
+  async startHtml5QrcodeScanner() {
+    // readerをクリア（ネイティブvideoが残っていたら消す）
+    const reader = document.getElementById('reader');
+    if (reader) reader.innerHTML = '';
+    if (!this.html5Qrcode) this.html5Qrcode = new Html5Qrcode("reader");
+
+    await this.html5Qrcode.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        // iOS向け：枠指定は相性が悪いことがあるので外す
+        disableFlip: true
+      },
+      (decodedText) => { this.onCodeScanned(decodedText); },
+      () => {}
+    );
+  },
+
+  async startNativeBarcodeDetector() {
+    const reader = document.getElementById('reader');
+    if (!reader) throw new Error('reader not found');
+
+    // DOMセットアップ
+    reader.innerHTML = '';
+    const v = document.createElement('video');
+    v.setAttribute('playsinline', 'true');
+    v.setAttribute('muted', 'true');
+    v.autoplay = true;
+    v.style.width = '100%';
+    v.style.height = '100%';
+    v.style.objectFit = 'contain';
+    v.style.background = '#000';
+    reader.appendChild(v);
+    this.nativeVideoEl = v;
+
+    // カメラ取得
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: { ideal: 'environment' }
+      }
+    });
+    this.nativeStream = stream;
+    v.srcObject = stream;
+
+    // iOSはplay()が必要なことがある
+    try { await v.play(); } catch (e) {}
+
+    // Detector
+    this.nativeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+
+    // デバウンス初期化
+    this.nativeLastText = '';
+    this.nativeLastAt = 0;
+    this.nativeTickAt = 0;
+
+    // ループ開始（負荷を下げるため200ms間隔）
+    const loop = async (ts) => {
+      this.nativeRaf = requestAnimationFrame(loop);
+      if (!this.nativeVideoEl || this.nativeVideoEl.readyState < 2) return;
+
+      if (ts - this.nativeTickAt < 200) return;
+      this.nativeTickAt = ts;
+
+      try {
+        const codes = await this.nativeDetector.detect(this.nativeVideoEl);
+        if (codes && codes.length) {
+          const text = codes[0].rawValue || '';
+          const now = Date.now();
+          // 同一テキスト連打を抑制
+          if (text && !(text === this.nativeLastText && (now - this.nativeLastAt) < 1200)) {
+            this.nativeLastText = text;
+            this.nativeLastAt = now;
+            this.onCodeScanned(text);
+          }
+        }
+      } catch (e) {
+        // 検出失敗は無視（連続で呼ばれる）
+      }
+    };
+    this.nativeRaf = requestAnimationFrame(loop);
+  },
+
+  async stopNativeBarcodeDetector() {
+    if (this.nativeRaf) {
+      cancelAnimationFrame(this.nativeRaf);
+      this.nativeRaf = null;
+    }
+    if (this.nativeStream) {
+      try { this.nativeStream.getTracks().forEach(t => t.stop()); } catch(e) {}
+      this.nativeStream = null;
+    }
+    if (this.nativeVideoEl) {
+      try { this.nativeVideoEl.pause(); } catch(e) {}
+      this.nativeVideoEl.srcObject = null;
+      this.nativeVideoEl = null;
+    }
+    this.nativeDetector = null;
+  },
+
+  showScanError(err) {
+    const msg = String(err && err.message ? err.message : err);
+    this.updateScanDebug({ error: msg });
+
+    document.getElementById('scan-overlay').classList.add('hidden');
+    const el = document.getElementById('scan-error');
+    if (el) el.classList.remove('hidden');
+
+    // debugパネルがあれば追記
+    if (typeof this.debugLog === 'function') {
+      this.debugLog('scanner_error', msg);
+    }
+  },
+
+  retryScanner() {
+    // stop if running
+    if (this.html5Qrcode && this.html5Qrcode.isScanning) {
+      this.html5Qrcode.stop().catch(() => {});
+    }
+    this.initScanner();
+  },
+
+  async onCodeScanned(text) {
+        const nowMs = Date.now();
+        if (this.scanBusy) return;
+        if (this.lastDecodedText === text && (nowMs - this.lastDecodedAt) < 1500) return;
+        this.scanBusy = true;
+        this.lastDecodedText = text;
+        this.lastDecodedAt = nowMs;
+
+        const s = String(text || "").trim();
+        this.updateScanDebug({ raw: s.slice(0, 240), parsed: "-", error: "-" });
+
+        this.playBeep();
+
+        // --- QR parse (official / external) ---
+        let itemId = null;
+        let sig = null;
+        let qrKind = "unknown";
+
+        // Official BOXMART format
+        const m1 = s.match(/^BOXMART:ITEM=([a-zA-Z0-9_-]+):SIG=([a-zA-Z0-9_-]+)$/);
+        if (m1) {
+            itemId = m1[1];
+            sig = m1[2];
+            qrKind = "boxmart";
+        } else {
+            // External/test QR: extract SKU***(-**) from any text (e.g., Google Lens generated QR)
+            const m2 = s.match(/SKU\d{3}(?:-\d{2})?/i);
+            if (m2) {
+                itemId = m2[0].toUpperCase();
+                sig = "EXT_" + hash32FNV1a(s);
+                qrKind = "external_sku";
+            }
+        }
+
+        if (!itemId || !sig) {
+            this.showToast("無効なQRコードです（BOXMART形式ではありません）", "error");
+            this.updateScanDebug({ raw: s.slice(0, 240), error: "invalid_format" });
+
+            // GAS: invalid scan (diagnosis)
+            try {
+                await this.postToGAS({
+                    type: "scan_invalid",
+                    mode: this.scanMode,
+                    slot: this.currentScanTarget + 1,
+                    item_id: "",
+                    sig: "",
+                    raw: s,
+                    note: "invalid_format"
+                }, this.isDebug);
+            } catch (e) {}
+
+            await this.restartScannerSoon();
+            this.scanBusy = false;
+            return;
+        }
+
+        // Debug view: show what was parsed
+        this.updateScanDebug({ raw: s.slice(0, 240), parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "-" });
+
+        // Duplicate by SIG
+        const dupIdx = this.scanBuffer.findIndex((val, idx) =>
+            idx !== this.currentScanTarget && val && val !== "empty" && val.sig === sig
+        );
+
+        if (dupIdx >= 0) {
+            const other = this.scanBuffer[dupIdx];
+
+            // If same SIG but different ITEM => QR generation bug (SIG collision). Auto-fix SIG so you can proceed.
+            if (other && other.id && other.id !== itemId) {
+                sig = (sig + "_ALT_" + hash32FNV1a(s)).slice(0, 64);
+                qrKind = qrKind + "|sig_collision_fixed";
+                this.updateScanDebug({ parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "sig_collision_fixed" });
+            } else {
+                this.showToast(`重複です（枠${dupIdx + 1}で登録済み）`, "error");
+                this.updateScanDebug({ parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "duplicate" });
+
+                // GAS: duplicate scan (diagnosis)
+                try {
+                    await this.postToGAS({
+                        type: "scan_duplicate",
+                        mode: this.scanMode,
+                        slot: this.currentScanTarget + 1,
+                        item_id: itemId,
+                        sig: sig,
+                        raw: s,
+                        note: `dup_of_${dupIdx + 1}|${qrKind}`
+                    }, this.isDebug);
+                } catch (e) {}
+
+                await this.restartScannerSoon();
+                this.scanBusy = false;
+                return;
+            }
+        }
+
+        // Save to current slot
+        this.scanBuffer[this.currentScanTarget] = { id: itemId, sig: sig };
+
+        // GAS: per-scan log (this is the key fix so rows appear immediately)
+        try {
+            await this.postToGAS({
+                type: "scan_item",
+                mode: this.scanMode,
+                slot: this.currentScanTarget + 1,
+                item_id: itemId,
+                sig: sig,
+                raw: s,
+                note: qrKind
+            }, this.isDebug);
+        } catch (e) {}
+
+        // Immediate UI feedback
+        const rawInfo = this.isDebug ? ` / RAW=${s.slice(0, 80)}` : "";
+        this.showToast(`枠${this.currentScanTarget + 1}に登録しました: ${itemId}${rawInfo}`, "success");
+
+        // Reflect scanned slot, then auto-select next unconfirmed slot
+        this.renderScanGrid();
+        this.moveToNextUnconfirmedTarget();
+        this.renderScanGrid();
+
+        // Hard restart to avoid “sticky” decode on iOS / native detector
+        await this.restartScannerSoon();
+        this.scanBusy = false;
+    },
+
+    async restartScannerSoon() {
+      // Hard restart for both Native BarcodeDetector and html5-qrcode
+      if (this.currentScreen !== "scan") return;
+
+      // Prevent restart storms
+      if (this._restartInFlight) return;
+      this._restartInFlight = true;
+
+      // Reset guards
+      this.lastDecodedText = null;
+      this.lastDecodedAt = 0;
+      this.scanBusy = false;
+
+      // Stop scanners (native/html5)
+      try { await this.stopAnyScanner(); } catch (e) {}
+
+      // Fully refresh camera pipeline (important on iOS where the video frame can "stick")
+      try {
+        if (this.nativeStream) {
+          this.nativeStream.getTracks().forEach(t => { try { t.stop(); } catch(e) {} });
+        }
+      } catch (e) {}
+      this.nativeStream = null;
+      this.nativeVideoEl = null;
+      this.nativeDetector = null;
+      this.nativeLastText = '';
+      this.nativeLastAt = 0;
+      this.nativeTickAt = 0;
+
+      // Restart shortly to let camera pipeline refresh
+      setTimeout(async () => {
+        try {
+          if (this.currentScreen !== "scan") return;
+          await this.initScanner();
+        } finally {
+          this._restartInFlight = false;
+        }
+      }, 450);
+    },
+
+  markCurrentAsEmpty() {
+    const fixedSlot = this.currentScanTarget;
+    const slot = fixedSlot + 1;
+    this.scanBuffer[fixedSlot] = 'empty';
+
+    this.showToast(`枠${slot}を「空」にしました`, 'success');
+
+    // GASへ送信（1回だけ）
+    this.postToGAS({
+      type: 'scan_empty',
+      mode: this.scanMode,
+      userId: getUserId(),
+      slot,
+      item_id: '',
+      sig: '',
+      note: 'marked_empty'
+    });
+
+    // 反映が遅れて見えるケース対策：即描画→次の未確認枠へ移動→再描画
+    this.renderScanGrid();
+    this.moveToNextUnconfirmedTarget();
+    this.renderScanGrid();
+  },
+
+  manualInputCode() {
+    const input = prompt(`商品コードを手入力してください
+(例: BOXMART:ITEM=xxx:SIG=yyy)
+※検証用ショートカット: '1' でダミー生成`);
+    if (!input) return;
+    if (input === '1') {
+      const r = Math.floor(Math.random() * 100000);
+      this.onCodeScanned(`BOXMART:ITEM=dummy_${r}:SIG=sig_${r}`);
+      return;
+    }
+    this.onCodeScanned(input);
+  },
+
+  moveToNextUnconfirmedTarget() {
+    for (let i = 0; i < CONFIG.BOX_CAPACITY; i++) {
+      if (this.scanBuffer[i] === null) {
+        this.currentScanTarget = i;
+        return;
+      }
+    }
+  },
+
+  playBeep() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      osc.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.1);
+    } catch(e) {}
+  },
+
+  showToast(message, kind = 'info') {
+    const el = document.getElementById('toast');
+    if (!el) return;
+    el.textContent = message;
+    el.style.display = 'block';
+    const bg = kind === 'error' ? 'rgba(220,38,38,.95)' : (kind === 'success' ? 'rgba(22,163,74,.95)' : 'rgba(17,24,39,.95)');
+    el.style.background = bg;
+    clearTimeout(this._toastTimer);
+    const timeoutMs = this.isDebug ? 6000 : 2200;
+    this._toastTimer = setTimeout(() => { el.style.display = 'none'; }, timeoutMs);
+    // 触覚（対応端末のみ）
+    try { if (navigator.vibrate) navigator.vibrate(kind === 'error' ? [40,40,40] : 20); } catch(e) {}
+  },
+
+
+  confirmScan() {
+    if (this.html5Qrcode && this.html5Qrcode.isScanning) {
+      this.html5Qrcode.stop().catch(() => {});
+    }
+    if (this.scanMode === 'restock') this.processRestock();
+    else this.processEndOfMonth();
+  },
+
+  // ---------------------------------------
+  // Business logic
+  // ---------------------------------------
+  processRestock() {
+    const emptyCount = this.scanBuffer.filter(v => v === 'empty').length;
+    if (emptyCount === 0) {
+      alert('空き枠がありません。追加は不要です。');
+      this.navigate('home');
+      return;
+    }
+
+    const itemsTotal = emptyCount * CONFIG.ITEM_AVG_PRICE;
+    let fee = CONFIG.FEE_RESTOCK;
+    let shipping = CONFIG.SHIPPING_COST;
+    let isBundled = false;
+    let targetShipment = null;
+
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
+
+    // shipments this month (scheduledDate 기준)
+    const shipmentsThisMonth = this.state.data.shipments.filter(s => {
+      const d = new Date(s.scheduledDate);
+      return `${d.getFullYear()}-${d.getMonth() + 1}` === currentMonthKey;
+    });
+
+    const pendingShipment = this.state.data.shipments.find(s => s.status === 'pending');
+
+    if (shipmentsThisMonth.length >= CONFIG.MAX_SHIPMENTS_PER_MONTH) {
+      // month 3rd+ => bundle to next pending (no extra fee/shipping)
+      isBundled = true;
+      fee = 0; shipping = 0;
+      if (pendingShipment) {
+        targetShipment = pendingShipment;
+      } else {
+        // fallback: create a new pending shipment (still treated as bundled in UI)
+        targetShipment = this.createNewShipmentObj(this.addDays(now, CONFIG.SHIPPING_INTERVAL_DAYS));
+        this.state.data.shipments.push(targetShipment);
+      }
+    } else if (pendingShipment) {
+      // check deadline (day before 23:59)
+      const deadline = new Date(pendingShipment.scheduledDate);
+      deadline.setDate(deadline.getDate() - 1);
+      deadline.setHours(23,59,59,999);
+
+      if (now <= deadline) {
+        isBundled = true;
+        fee = 0; shipping = 0;
+        targetShipment = pendingShipment;
+      } else {
+        // after deadline => new shipment at least 5 days later
+        const base = new Date(pendingShipment.scheduledDate);
+        const nextBase = this.addDays(base, CONFIG.SHIPPING_INTERVAL_DAYS);
+        const min = this.addDays(now, CONFIG.SHIPPING_INTERVAL_DAYS);
+        const finalDate = (nextBase > min) ? nextBase : min;
+        targetShipment = this.createNewShipmentObj(finalDate);
+        this.state.data.shipments.push(targetShipment);
+      }
+    } else {
+      // no pending => create new in 5 days
+      targetShipment = this.createNewShipmentObj(this.addDays(now, CONFIG.SHIPPING_INTERVAL_DAYS));
+      this.state.data.shipments.push(targetShipment);
+    }
+
+    // update shipment totals
+    targetShipment.itemTotal += itemsTotal;
+    if (!isBundled) {
+      targetShipment.fee = fee;
+      targetShipment.shippingCost = shipping;
+    }
+    targetShipment.total = targetShipment.itemTotal + targetShipment.fee + targetShipment.shippingCost;
+
+    // Update inventory: keep scanned items, fill empties with scheduled items
+    this.state.data.inventory = this.scanBuffer.map((val) => {
+      if (val === 'empty') {
+        // scheduled placeholder
+        return { id: 'scheduled_' + Math.random().toString(36).slice(2,8), status: 'scheduled' };
+      }
+      if (val && typeof val === 'object') {
+        return { id: val.itemId || val.id || 'unknown', sig: val.sig || '', status: 'filled' };
+      }
+      // safety fallback
+      return null;
+    });
+
+    this.state.save();
+
+    // GAS: confirmed summary
+    const confirmedCount = CONFIG.BOX_CAPACITY;
+    this.postToGAS({
+      type: 'scan_confirm',
+      mode: 'restock',
+      userId: CONFIG.DEFAULT_USER_ID,
+      confirmedCount,
+      emptyCount,
+      note: isBundled ? 'bundled' : 'new_shipment'
+    });
+
+    // render result
+    document.getElementById('result-bundle-msg').textContent =
+      isBundled ? '※既存の便に同梱されるため、追加の送料・手数料はかかりません'
+               : `※最短（${this.formatDate(targetShipment.scheduledDate)}）で発送します`;
+
+    document.getElementById('result-items-count').textContent = emptyCount;
+    document.getElementById('result-items-price').textContent = `¥${targetShipment.itemTotal.toLocaleString()}`;
+    document.getElementById('result-fee').textContent = `¥${targetShipment.fee.toLocaleString()}`;
+    document.getElementById('result-shipping-region').textContent = CONFIG.SHIPPING_REGION;
+    document.getElementById('result-shipping-cost').textContent = `¥${targetShipment.shippingCost.toLocaleString()}`;
+    document.getElementById('result-total').textContent = `¥${targetShipment.total.toLocaleString()}`;
+
+    this.navigate('restock-result');
+  },
+
+  processEndOfMonth() {
+    this.state.data.status = 'active';
+    this.state.data.lastEndOfMonthScan = new Date().toISOString();
+
+    this.state.data.inventory = this.scanBuffer.map((val) => {
+      if (val === 'empty') return null;
+      if (val && typeof val === 'object') return { id: val.itemId || val.id || 'unknown', sig: val.sig || '', status: 'filled' };
+      return null;
+    });
+
+    this.state.save();
+
+    // GAS: month end confirm
+    const emptyCount = this.scanBuffer.filter(v => v === 'empty').length;
+    this.postToGAS({
+      type: 'scan_confirm',
+      mode: 'endofmonth',
+      userId: CONFIG.DEFAULT_USER_ID,
+      confirmedCount: CONFIG.BOX_CAPACITY,
+      emptyCount,
+      note: 'month_end'
+    });
+
+    this.navigate('endofmonth-result');
+  },
+
+  createNewShipmentObj(dateObj) {
+    return {
+      id: 'shp_' + Math.random().toString(36).substr(2, 9),
+      scheduledDate: dateObj.toISOString(),
+      status: 'pending',
+      itemTotal: 0,
+      fee: 0,
+      shippingCost: 0,
+      total: 0
+    };
+  },
+
+  addDays(dateObj, days) {
+    const d = new Date(dateObj);
+    d.setDate(d.getDate() + days);
+    return d;
+  },
+
+  // Shipment render
+  renderShipment() {
+    const top = document.getElementById('shipment-eta-top');
+    const eta = this.getEtaIfRestockNow();
+    top.textContent = eta ? eta : '在庫追加すると、ここに「いつ届くか」が表示されます。';
+
+    const content = document.getElementById('shipment-content');
+    const pendingShipments = this.state.data.shipments.filter(s => s.status === 'pending');
+
+    if (pendingShipments.length === 0) {
+      content.innerHTML = `
+        <div class="bg-gray-50 border rounded-xl p-8 text-center text-gray-500">
+          現在、発送予定の便はありません。<br>持ち出し（購入確定）を記録すると履歴が残ります。
+        </div>`;
+      return;
+    }
+
+    let html = '';
+    const now = new Date();
+    const currentMonthKey = `${now.getFullYear()}-${now.getMonth() + 1}`;
+    const shipmentsThisMonthCount = this.state.data.shipments.filter(s => {
+      const d = new Date(s.scheduledDate);
+      return `${d.getFullYear()}-${d.getMonth() + 1}` === currentMonthKey;
+    }).length;
+
+    pendingShipments
+      .sort((a,b) => new Date(a.scheduledDate) - new Date(b.scheduledDate))
+      .forEach((ship) => {
+        const deadline = new Date(ship.scheduledDate);
+        deadline.setDate(deadline.getDate() - 1);
+        deadline.setHours(23,59,59,999);
+
+        const isDeadlinePassed = now > deadline;
+        const statusBadge = isDeadlinePassed
+          ? '<span class="bg-red-100 text-red-800 text-xs px-2 py-1 rounded font-bold">締切後・発送準備中</span>'
+          : '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold">同梱可能（締切前）</span>';
+
+        const bundleMsg = !isDeadlinePassed
+          ? `<p class="text-sm text-green-600 mt-2 font-bold">✓ 今在庫追加するとこの便に同梱されます（追加送料/手数料なし）</p>`
+          : `<p class="text-sm text-red-500 mt-2 font-bold">※締切後：今在庫追加すると次の便になります</p>`;
+
+        const countMsg = (shipmentsThisMonthCount >= 3)
+          ? `<div class="bg-blue-50 text-blue-800 text-xs p-2 mt-2 rounded">今月3回目以降の在庫追加は、追加便を出さず「次回便にまとめて発送」します。</div>`
+          : '';
+
+        html += `
+          <div class="bg-white border rounded-xl shadow-sm p-4 mb-4">
+            <div class="flex justify-between items-center mb-3">
+              <div class="font-bold text-gray-800">📦 便ID: ${ship.id.substring(0,8)}</div>
+              ${statusBadge}
+            </div>
+            <ul class="text-sm space-y-2 text-gray-600">
+              <li class="flex justify-between"><span>発送予定日</span> <span class="font-bold text-lg text-black">${this.formatDate(ship.scheduledDate)}</span></li>
+              <li class="flex justify-between"><span>同梱締切</span> <span class="font-bold text-red-500">${this.formatDate(deadline)} 23:59</span></li>
+              <li class="flex justify-between border-t pt-2 mt-2"><span>請求予定額</span> <span class="font-bold">¥${ship.total.toLocaleString()}</span></li>
+            </ul>
+            ${bundleMsg}
+            ${countMsg}
+          </div>
+        `;
+      });
+
+    content.innerHTML = html;
+  },
+// Settings / Account
+renderSettings() {
+  const acc = loadAccount();
+  const nameEl = document.getElementById('acc-name');
+  if (nameEl) {
+    document.getElementById('acc-name').value = acc.name || '';
+    document.getElementById('acc-zip').value = acc.zip || '';
+    document.getElementById('acc-address').value = acc.address || '';
+    document.getElementById('acc-phone').value = acc.phone || '';
+    const u = document.getElementById('gas-url-fixed');
+    if (u) u.textContent = CONFIG.GAS_WEBAPP_URL;
+    const du = document.getElementById('device-user-id');
+    if (du) du.textContent = getUserId();
+  }
+},
+
+saveAccount() {
+  const name = (document.getElementById('acc-name').value || '').trim();
+  const zip = (document.getElementById('acc-zip').value || '').trim();
+  const address = (document.getElementById('acc-address').value || '').trim();
+  const phone = (document.getElementById('acc-phone').value || '').trim();
+
+  if (!name || !address || !phone) {
+    alert('お名前・住所・電話番号は必須です。');
+    return;
+  }
+  saveAccountToStorage({ name, zip, address, phone });
+
+  const msg = document.getElementById('acc-saved-msg');
+  if (msg) {
+    msg.classList.remove('hidden');
+    setTimeout(() => msg.classList.add('hidden'), 1500);
+  }
+
+  this.postToGAS({ type: 'account_saved', mode: 'settings', note: 'account_saved' }, true);
+},
+
+resetData() {
+  const ok = confirm('この端末のデータ（在庫・便・アカウント）を初期化します。よろしいですか？');
+  if (!ok) return;
+
+  try {
+    localStorage.removeItem('boxmart_data');
+    localStorage.removeItem(STORAGE_KEY_ACCOUNT);
+    localStorage.removeItem(STORAGE_KEY_USERID);
+    localStorage.removeItem('boxmart_uid'); // 診断スクリプトで使っているID
+  } catch (e) {}
+
+  location.reload();
+},
+
+async sendTestPing() {
+  const ok = await this.postToGAS({ type: 'ping', mode: 'settings', note: 'manual_test' }, true);
+  if (ok) alert('送信しました。スプレッドシート（scan_log）を確認してください。');
+  else alert('送信に失敗しました。GASの公開設定（全員）とURLを確認してください。');
+},
+
+// ---------------------------------------
+// GAS integration
+
+  // ---------------------------------------
+  async postToGAS(payload, showConsole=false) {
+    const url = (CONFIG.GAS_WEBAPP_URL || '').trim();
+    if (!url) {
+      if (showConsole) console.warn('[GAS] URL not set. Skipped.', payload);
+      return false;
+    }
+    try {
+      const acc = loadAccount();
+      const enriched = Object.assign({
+        userId: getUserId(),
+        account_name: acc.name || '',
+        account_zip: acc.zip || '',
+        account_address: acc.address || '',
+        account_phone: acc.phone || ''
+      }, payload || {});
+      const body = JSON.stringify(enriched);
+      // no-cors: we can't read response but it sends
+      await fetch(url, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body
+      });
+      if (showConsole) console.log('[GAS] sent', payload);
+      return true;
+    } catch (e) {
+      console.error('[GAS] failed', e, payload);
+      return false;
+    }
+  }
+};
+
+window.onload = () => { App.init(); };
+
+
+
+
+// === v24 fix: provide getEtaIfRestockNow to avoid crash ===
+(function(){
+  function attach(){
+    if(!window.App) return;
+    if(typeof window.App.getEtaIfRestockNow !== 'function'){
+      window.App.getEtaIfRestockNow = function(){
+        // Return next shipment ETA string if possible; fallback '-'
+        try{
+          if(typeof this.getNextShipment === 'function'){
+            const s=this.getNextShipment();
+            if(s && s.scheduledDate) return this.formatDate(s.scheduledDate);
+          }
+        }catch(e){}
+        return '-';
+      };
+    }
+  }
+  // attach soon and after load
+  attach();
+  window.addEventListener('load', attach);
+})();
+
+
+// === v24 settings save/ping (no global click hijack) ===
+(function(){
+  const GAS_URL = "https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec";
+
+  function ensureToast(){
+    if(document.getElementById('toast')) return;
+    const t=document.createElement('div');
+    t.id='toast';
+    t.style.cssText="position:fixed;left:50%;transform:translateX(-50%);bottom:96px;z-index:2147483647;min-width:260px;max-width:90vw;background:#111827;color:#fff;padding:10px 14px;border-radius:14px;font-weight:900;text-align:center;display:none;box-shadow:0 10px 25px rgba(0,0,0,.25);pointer-events:none;";
+    document.body.appendChild(t);
+  }
+  function toast(msg, ok=true){
+    ensureToast();
+    const t=document.getElementById('toast'); if(!t) return;
+    t.textContent = msg;
+    t.style.display='block';
+    t.style.background = ok ? '#16a34a' : '#dc2626';
+    clearTimeout(toast._tm);
+    toast._tm=setTimeout(()=>{ t.style.display='none'; }, 2200);
+  }
+  function ensureStatusBox(){
+    if(document.getElementById('save-status')) return;
+    const s=document.getElementById('screen-settings');
+    if(!s) return;
+    const box=document.createElement('div');
+    box.id='save-status';
+    box.style.cssText="margin-top:10px;font-weight:900;font-size:16px;";
+    s.appendChild(box);
+  }
+  function setStatus(msg, ok){
+    ensureStatusBox();
+    const el=document.getElementById('save-status');
+    if(el){ el.textContent=msg; el.style.color = ok ? '#16a34a' : '#dc2626'; }
+    toast(msg, ok);
+  }
+
+  function getUserId(){
+    const key='boxmart_uid';
+    let id=localStorage.getItem(key);
+    if(!id){ id='u_'+Math.random().toString(36).slice(2,14); localStorage.setItem(key,id); }
+    return id;
+  }
+
+  function collectAccount(){
+    const nameEl = document.getElementById('acc-name');
+    const zipEl = document.getElementById('acc-zip');
+    const addrEl = document.getElementById('acc-address');
+    const phoneEl = document.getElementById('acc-phone');
+    const account_name = (nameEl && (nameEl.value||'').trim()) || '';
+    const account_zip = (zipEl && (zipEl.value||'').trim()) || '';
+    const account_address = (addrEl && (addrEl.value||'').trim()) || '';
+    const account_phone = (phoneEl && (phoneEl.value||'').trim()) || '';
+    const s=document.getElementById('screen-settings');
+    const all = s ? [...s.querySelectorAll('input,textarea,select')].map((f,i)=>({
+      i, tag:f.tagName.toLowerCase(), type:(f.getAttribute('type')||'').toLowerCase(),
+      id:f.id||'', placeholder:f.getAttribute('placeholder')||'', value:(f.value||'').trim()
+    })) : [];
+    return { account_name, account_zip, account_address, account_phone, _diag:{fields_all:all} };
+  }
+
+  async function postToGAS(payload){
+    await fetch(GAS_URL, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(payload)});
+  }
+
+  let guard=0;
+  async function pingOnce(){
+    if(guard) return;
+    guard=1; setTimeout(()=>guard=0, 900);
+    const acc=collectAccount();
+    try{
+      await postToGAS({
+        type:'ping', mode:'settings', userId:getUserId(),
+        note:(`manual_test_v30|name=${acc.account_name}|zip=${acc.account_zip}|addr=${acc.account_address}|phone=${acc.account_phone}`),
+        account_name:acc.account_name, account_zip:acc.account_zip, account_address:acc.account_address, account_phone:acc.account_phone,
+        raw: JSON.stringify(acc._diag)
+      });
+      setStatus('送信しました（ping v30）', true);
+    }catch(e){
+      setStatus('送信に失敗（通信/権限）', false);
+    }
+  }
+
+  async function saveOnce(){
+    if(guard) return;
+    guard=1; setTimeout(()=>guard=0, 900);
+    const acc=collectAccount();
+    const missing=[];
+    if(!acc.account_name) missing.push('お名前');
+    if(!acc.account_address) missing.push('住所');
+    if(!acc.account_phone) missing.push('電話番号');
+    if(missing.length){ setStatus('未入力があります：'+missing.join('・'), false); return; }
+
+    localStorage.setItem('boxmart_account', JSON.stringify({
+      account_name:acc.account_name, account_zip:acc.account_zip, account_address:acc.account_address, account_phone:acc.account_phone
+    }));
+    setStatus('保存しました', true);
+
+    try{
+      await postToGAS({
+        type:'account_saved', mode:'settings', userId:getUserId(),
+        note:(`saved_v30|name=${acc.account_name}|zip=${acc.account_zip}|addr=${acc.account_address}|phone=${acc.account_phone}`),
+        account_name:acc.account_name, account_zip:acc.account_zip, account_address:acc.account_address, account_phone:acc.account_phone,
+        raw: JSON.stringify(acc._diag)
+      });
+    }catch(e){
+      setStatus('保存はできましたが送信に失敗', false);
+    }
+  }
+
+  function isSettingsActive(){
+    const s=document.getElementById('screen-settings');
+    return !!(s && s.classList.contains('active'));
+  }
+
+  function matchesButton(el, text){
+    if(!el) return false;
+    const b = el.closest ? el.closest('button') : null;
+    if(!b) return false;
+    const t=(b.textContent||'').replace(/\s+/g,'');
+    return t.includes(text);
+  }
+
+
+  // --- Settings buttons: direct binding (avoid global capture issues) ---
+  function bindSettingsButtons(){
+    const btnSave = document.getElementById('btn-save');
+    const btnPing = document.getElementById('btn-ping');
+    const btnReset = document.getElementById('btn-reset');
+    if(btnSave){
+      btnSave.addEventListener('click', async (e)=>{
+        // If settings screen isn't active, ignore (safety)
+        if(!isSettingsActive()) return;
+        await saveAccount();
+      }, {passive:true});
+    }
+    if(btnPing){
+      btnPing.addEventListener('click', async (e)=>{
+        if(!isSettingsActive()) return;
+        await sendPing();
+      }, {passive:true});
+    }
+    if(btnReset){
+      btnReset.addEventListener('click', (e)=>{
+        if(!isSettingsActive()) return;
+        resetDevice();
+      }, {passive:true});
+    }
+  }
+
+
+document.addEventListener('DOMContentLoaded', ()=>{
+  // v48: bind settings buttons
+  bindSettingsButtons();
+
+    ensureStatus();
+    const s=document.getElementById('screen-settings');
+    if(s && !s.querySelector('#btn-diag-v28')){
+      const d=document.createElement('button');
+      d.id='btn-diag-v28';
+      d.type='button';
+      d.textContent='診断送信（v28）';
+      d.style.cssText="width:100%;margin-top:10px;background:#111827;color:#fff;font-weight:900;padding:12px 16px;border-radius:12px;";
+      d.addEventListener('click',(e)=>{ e.preventDefault(); pingOnce(); }, false);
+      s.appendChild(d);
+    }
+  });
+})();
+</script>
+</body>
+</html>
