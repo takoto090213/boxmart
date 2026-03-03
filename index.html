@@ -1,919 +1,723 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>BOXMART <span style="font-size:12px;color:#94a3b8;font-weight:800;">v26</span> - ミニストア</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>BOXMART</title>
   <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    :root{
+      --blue:#2563eb;
+      --bg:#f5f7fb;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --border:#e5e7eb;
+      --radius:16px;
+      --shadow:0 8px 24px rgba(17,24,39,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .app{
+      max-width:520px;
+      margin:0 auto;
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      padding-bottom: calc(76px + env(safe-area-inset-bottom));
+    }
+    header{
+      position:sticky;
+      top:0;
+      z-index:50;
+      background:rgba(255,255,255,.92);
+      backdrop-filter: blur(10px);
+      border-bottom:1px solid var(--border);
+      padding:12px 16px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:10px;
+      font-weight:800;
+      color:var(--blue);
+      letter-spacing:.3px;
+    }
+    .pill{
+      font-size:12px;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--border);
+      background:#fff;
+      color:var(--muted);
+      white-space:nowrap;
+    }
+    .pill.ok{background:#e7f9ef;border-color:#b7f1cc;color:#116a2d;}
+    .build{
+      position:fixed;
+      left:10px;
+      top:64px;
+      z-index:60;
+      font-size:12px;
+      padding:8px 10px;
+      border-radius:999px;
+      background:#111827;
+      color:#fff;
+      opacity:.85;
+    }
+    main{padding:14px 14px 22px;}
+    .h1{font-size:22px;font-weight:800;margin:10px 2px 12px;}
+    .card{
+      background:var(--card);
+      border:1px solid var(--border);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+      margin:10px 0;
+    }
+    .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .btn{
+      width:100%;
+      border:0;
+      background:var(--blue);
+      color:#fff;
+      font-weight:800;
+      border-radius:14px;
+      padding:16px 14px;
+      font-size:18px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:10px;
+      box-shadow:0 10px 18px rgba(37,99,235,.18);
+      cursor:pointer;
       -webkit-tap-highlight-color: transparent;
-      background-color: #f3f4f6;
-      color: #1f2937;
-      margin: 0;
-      padding: 0;
-      overscroll-behavior-y: none;
     }
-    .app-container {
-      max-width: 480px;
-      margin: 0 auto;
-      background-color: #ffffff;
-      height: 100vh;
-      height: 100dvh;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 0 15px rgba(0,0,0,0.05);
-      position: relative;
-      overflow: hidden;
+    .btn:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+    .btn.secondary{
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--border);
+      box-shadow:none;
+      font-weight:700;
     }
-    .screen {
-      display: none;
-      flex: 1 1 auto;
-      flex-direction: column;
-      min-height: 0; /* IMPORTANT: allow flex child to scroll */
-      padding-bottom: calc(240px + env(safe-area-inset-bottom));
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
+    .btn.small{padding:10px 12px;font-size:14px;border-radius:12px}
+    .btn.inline{width:auto}
+    .muted{color:var(--muted);font-size:13px;line-height:1.5}
+    .kpi{
+      display:flex;align-items:center;justify-content:center;
+      flex-direction:column;
+      padding:18px 10px;
+      background:#eef4ff;
+      border:1px solid #dbeafe;
+      border-radius:var(--radius);
     }
-    .screen.active { display: flex; }
-
-    .box-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
+    .kpi .big{font-size:42px;font-weight:900;color:var(--blue);line-height:1}
+    .kpi .sub{margin-top:6px;font-size:13px;color:var(--muted);text-align:center}
+    .list{
+      display:flex;flex-direction:column;gap:10px;
+      margin-top:10px;
     }
-    .box-item {
-      border: 2px solid #e5e7eb;
-      border-radius: 0.5rem;
-      padding: 1rem;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      min-height: 80px;
-      user-select: none;
+    .item{
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      background:#fff;
+      display:flex;
+      gap:10px;
+      align-items:flex-start;
+      justify-content:space-between;
     }
-    .box-item.active {
-      border-color: #3b82f6;
-      background-color: #eff6ff;
+    .item .left{min-width:0}
+    .item .title{font-weight:800;font-size:14px;line-height:1.3}
+    .item .meta{font-size:12px;color:var(--muted);margin-top:4px;display:flex;gap:10px;flex-wrap:wrap}
+    .tag{font-size:12px;padding:3px 8px;border-radius:999px;border:1px solid var(--border);background:#f9fafb;color:#374151}
+    .danger{background:#fff1f2;border-color:#fecdd3;color:#9f1239}
+    .toast{
+      position:fixed;
+      left:50%;
+      transform:translateX(-50%);
+      bottom:calc(92px + env(safe-area-inset-bottom));
+      z-index:80;
+      background:#111827;
+      color:#fff;
+      padding:10px 12px;
+      border-radius:12px;
+      font-size:13px;
+      opacity:0;
+      pointer-events:none;
+      transition:opacity .2s ease, transform .2s ease;
+      max-width:min(520px, calc(100vw - 24px));
+      width:calc(100vw - 24px);
     }
-    .box-item.scanned {
-      border-color: #10b981;
-      background-color: #ecfdf5;
+    .toast.show{opacity:.92; transform:translateX(-50%) translateY(-6px);}
+    nav{
+      position:fixed;
+      left:0;right:0;bottom:0;
+      background:rgba(255,255,255,.95);
+      border-top:1px solid var(--border);
+      backdrop-filter: blur(10px);
+      padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+      z-index:70;
     }
-    .box-item.empty {
-      border-color: #9ca3af;
-      background-color: #f3f4f6;
-      color: #6b7280;
+    .tabs{
+      max-width:520px;
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:repeat(4,1fr);
+      gap:8px;
     }
-
-    /*
-      iOS/Safari 対策：html5-qrcode が生成する video/canvas が
-      下のグリッドのタップを「食う」ことがありました。
-      ここでスキャナー領域を“固定高さの箱”に閉じ込め、タップが下の枠に届くようにします。
-    */
-    #reader {
-      width: 100%;
-      border-radius: 0.75rem;
-      overflow: hidden !important;   /* ★はみ出し防止 */
-      background: #000;
-      height: clamp(260px, 42vh, 360px); /* ★iPhoneでも見やすい高さ */
-      position: relative;
-      touch-action: none;
+    .tab{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      gap:6px;
+      padding:8px 6px;
+      border-radius:14px;
+      border:1px solid transparent;
+      color:var(--muted);
+      font-size:12px;
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
+      cursor:pointer;
     }
-#reader > div { position: absolute !important; inset: 0 !important; }
-    #reader video,
-    #reader canvas {
-      position: absolute !important;
-      inset: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
-      border-radius: 0.75rem;
-      background: transparent !important;
+    .tab.active{color:var(--blue); border-color:#dbeafe; background:#eff6ff;}
+    .icon{font-size:18px;line-height:1}
+    /* Scanner area */
+    .scannerWrap{
+      border:1px solid var(--border);
+      border-radius:18px;
+      overflow:hidden;           /* <- はみ出し防止 */
+      background:#000;
+      position:relative;
+      height:min(56vh, 420px);
     }
-/* html5-qrcode の余計なUIを非表示（下の要素のタップ事故を減らす） */
-    #reader__dashboard_section,
-    #reader__dashboard_section_csr {
-      display: none !important;
+    #reader{
+      position:absolute;
+      inset:0;
+      overflow:hidden;
+      background:#000;
     }
-
-    /* 枠のタップ精度を上げる */
-    .box-item { touch-action: manipulation; }
-
-    .sticky-action {
-      position: sticky;
-      bottom: calc(92px + env(safe-area-inset-bottom));
-      z-index: 30;
-      background: rgba(255,255,255,0.96);
-      backdrop-filter: blur(6px);
-      padding-top: 10px;
-      padding-bottom: 10px;
-    }
-
-    .bottom-nav {
-      position: absolute;
-      bottom: 0; left: 0;
-      width: 100%;
-      background: white;
-      border-top: 1px solid #e5e7eb;
-      display: flex;
-      justify-content: space-around;
-      padding: 0.5rem 0;
-      padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-      z-index: 50;
-    
-            pointer-events: auto;
-        }
-    .nav-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 0.5rem;
-      color: #6b7280;
-      font-size: 0.75rem;
-      width: 25%;
-      cursor: pointer;
-      background: transparent;
-      border: none;
-    }
-    .nav-item.active { color: #3b82f6; font-weight: bold; }
-    .nav-icon { font-size: 1.25rem; margin-bottom: 2px; }
-
-    /* iOS: prevent double-tap zoom on buttons */
-    button { touch-action: manipulation; }
-  
-        /* トースト */
-        #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));background:rgba(17,24,39,.95);color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:700;z-index:9999;max-width:92%;text-align:center;display:none;}
-
-
-#reader video { object-fit: contain !important; }
-
-    /* takeout mode: reserve space so sticky button won't cover content */
-    #scan-grid { padding-bottom: 120px; }
-    /* takeout list style */
-    .scan-list-item { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; }
-    .scan-list-item .meta { min-width:0; }
-    .scan-list-item .meta .name { font-weight:800; font-size:14px; line-height:1.25; }
-    .scan-list-item .meta .sub { font-size:12px; color:#6b7280; margin-top:2px; }
-    .scan-list-item .price { font-weight:900; white-space:nowrap; }
-
-
-    /* ---- iPhone Safari: prevent camera view from covering buttons ---- */
-    #reader { width:100%; height: 320px; overflow:hidden; position:relative; }
-    #reader video, #reader canvas { width:100% !important; height:100% !important; object-fit: cover; }
-    /* html5-qrcode sometimes injects wrappers without size */
-    #reader > div { width:100% !important; height:100% !important; }
-    /* Ensure scan list/grid is not hidden by the fixed confirm bar */
-    #scan-grid { margin-bottom: 120px; }
-    /* takeout: hide "empty" button */
-    #btn-mark-empty { display:none !important; }
-
-
-    /* === iPhone tap-block fix (v4) === */
-    #reader {
-      height: 320px !important;
-      max-height: 320px !important;
-      overflow: hidden !important;
-      position: relative !important;
-      z-index: 0 !important;
-      background: #000 !important;
-      border-radius: 16px;
-    }
-    #reader, #reader * {
-      max-height: 320px !important;
-    }
-    /* html5-qrcode creates video/canvas that can spill and steal taps on iOS */
-    #reader video, #reader canvas {
-      position: absolute !important;
-      inset: 0 !important;
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover !important;
-      pointer-events: none !important;
-      touch-action: none !important;
-    }
-    /* Keep app UI above any scanner artifacts */
-    #app, .app, .app-shell, main, header, nav, footer, .screen, .bottom-nav {
-      position: relative;
-      z-index: 10;
-    }
-
-    /* v8: Global tap-steal prevention (iOS) */
-    video, canvas { pointer-events: none !important; }
-    /* Ensure buttons/links always receive taps */
-    button, a, .nav-item { pointer-events: auto !important; }
-
-
-    /* v17: ensure camera fills container on iOS (remove black bars) */
-    #reader{position:relative;width:100%;height:100%;overflow:hidden;}
+    /* Force-fit video/canvas inside reader on iOS */
     #reader video, #reader canvas{
       position:absolute !important;
       inset:0 !important;
       width:100% !important;
       height:100% !important;
-      object-fit:cover !important;
-      border-radius: 0.75rem;
-      background: transparent !important;
+      object-fit:cover !important;   /* <- 黒帯減らす */
+      pointer-events:none !important;
     }
-    /* Single guide overlay (no double guide) */
-    .qr-guide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;}
-    .qr-guide-box{
-      width: min(68vw, 260px);
-      height: min(68vw, 260px);
-      border: 4px solid rgba(255,255,255,.95);
-      border-radius: 18px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,.25);
+    /* Our single guide */
+    .guide{
+      position:absolute;
+      inset:10%;
+      border:3px solid rgba(255,255,255,.92);
+      border-radius:18px;
+      box-shadow:0 0 0 2000px rgba(0,0,0,.22);
+      pointer-events:none;
     }
-
+    .guide::before,.guide::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:18px;
+      border:2px dashed rgba(255,255,255,.35);
+      margin:10px;
+    }
+    .settingsArea textarea{
+      width:100%;
+      min-height:160px;
+      border:1px solid var(--border);
+      border-radius:14px;
+      padding:12px;
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+      font-size:12px;
+      background:#fff;
+    }
+    .split{display:flex;gap:10px;flex-wrap:wrap}
+    .split .btn{flex:1}
+    .hr{height:1px;background:var(--border);margin:12px 0}
   </style>
 </head>
 <body>
-  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v18</div>
-  <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
-    BUILD TAKEOUT v11
-  </div>
+  <div class="build">BUILD TAKEOUT v19</div>
+  <div class="toast" id="toast"></div>
 
+  <div class="app">
+    <header>
+      <div class="brand">BOXMART</div>
+      <div class="pill" id="statusPill">状態取得中…</div>
+    </header>
 
-  <div id="js-error-banner" style="position:fixed;top:48px;left:12px;right:12px;z-index:99999;background:#111827;color:#fff;padding:10px 12px;border-radius:12px;font-size:12px;display:none;">
-    <div style="font-weight:800;margin-bottom:4px;">JSエラー</div>
-    <div id="js-error-text" style="white-space:pre-wrap;word-break:break-word;"></div>
-  </div>
-
-
-<div class="app-container">
-  <header class="bg-white px-4 py-3 border-b flex justify-between items-center z-40 shrink-0">
-    <h1 class="text-xl font-bold tracking-tight text-blue-600">BOXMART</h1>
-    <div id="status-badge" class="px-2 py-1 rounded text-xs font-bold">状態取得中...</div>
-  </header>
-
-  <!-- A: Home -->
-  <div id="screen-home" class="screen active p-4">
-    <h2 class="text-lg font-bold mb-4 shrink-0">現在の状況</h2>
-
-    <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4 text-center shrink-0">
-      <div class="text-sm text-blue-800 mb-1">本日の購入確定</div>
-      <div class="text-4xl font-extrabold text-blue-600" id="home-empty-slots">- / 10</div>
-      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※取った商品をスキャンしてください</div>
-      <div class="mt-3 text-xs text-gray-600" id="home-eta-line">-</div>
-    </div>
-
-    <div class="space-y-3 shrink-0">
-      <button onclick="App.navigate('restock-intro')" id="btn-home-restock"
-              class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-sm flex justify-between items-center px-6 disabled:bg-gray-300 disabled:text-gray-500 transition">
-        <span>📦 持ち出し</span><span class="text-xl">→</span>
-      </button>
-      <button onclick="App.navigate('shipment')"
-              class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition">
-        <span>🚚 次回便の確認</span><span class="text-xl">→</span>
-      </button>
-      <button onclick="App.navigate('endofmonth-intro')" id="btn-home-eom"
-              class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition relative">
-        <span>🗓 月末締め</span>
-        <span class="hidden absolute top-0 right-0 -mt-1 -mr-1 flex h-4 w-4" id="eom-alert">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-4 w-4 bg-red-500"></span>
-        </span>
-        <span class="text-xl">→</span>
-      </button>
-    </div>
-
-    <div class="mt-6 bg-gray-50 rounded-lg p-4 border border-gray-200 shrink-0">
-      <h3 class="font-bold text-gray-700 mb-2">サマリー</h3>
-      <ul class="text-sm space-y-2 text-gray-600">
-        <li class="flex justify-between"><span>次回発送予定:</span> <span id="home-next-date" class="font-bold">-</span></li>
-        <li class="flex justify-between"><span>同梱締切:</span> <span id="home-deadline" class="font-bold text-red-500">-</span></li>
-        <li class="flex justify-between"><span>アカウント状態:</span> <span id="home-account-status" class="font-bold">-</span></li>
-      </ul>
-    </div>
-  </div>
-
-  <!-- B1: Restock intro -->
-  <div id="screen-restock-intro" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4 shrink-0">持ち出し（購入確定）</h2>
-    <div class="bg-white border rounded-lg p-4 mb-6 text-sm text-gray-700 space-y-3">
-      <p class="font-bold">やることは2つだけ</p>
-      <ol class="list-decimal pl-5 text-gray-700 space-y-1">
-        <li><strong>箱から取った商品</strong>のQRをスキャン</li>
-        <li>内容を確認して<strong>「購入確定」</strong></li>
-      </ol>
-      <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
-        <p class="font-bold mb-1">ポイント</p>
-        <ul class="list-disc pl-5 space-y-1">
-          <li><strong>取った商品だけ</strong>スキャンしてください（箱に残っている商品はスキャンしません）</li>
-          <li>間違えた場合は「購入確定」を押さずに戻って、もう一度スキャンしてください</li>
-        </ul>
-      </div>
-      <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700">
-        <p class="font-bold mb-1">カメラが起動しないとき</p>
-        <ul class="list-disc pl-5 space-y-1">
-          <li>iPhoneは<strong>HTTPS</strong>のサイトでないとカメラが使えません。</li>
-          <li>ブラウザのカメラ許可をONにしてください。</li>
-        </ul>
-      </div>
-    </div>
-
-    <!-- 画面下に常に見えるCTA（ナビの上に固定） -->
-    <div class="mt-auto sticky" style="bottom: calc(90px + env(safe-area-inset-bottom));">
-      <div class="bg-white/95 backdrop-blur border rounded-xl p-3 shadow-sm">
-        <button onclick="App.startScanMode('restock')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md">
-          QRをスキャンして購入確定へ
-        </button>
-        <p class="text-[11px] text-gray-500 text-center mt-2">※タップすると背面カメラが起動します</p>
-      </div>
-    </div>
-  </div>
-
-  <!-- Scan screen -->
-  <div id="screen-scan" class="screen p-4">
-    <!-- Debug panel (visible only when ?debug=1) -->
-    <div id="scan-debug" class="hidden mb-3 rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">
-      <div class="font-bold mb-1">DEBUG</div>
-      <div class="space-y-1">
-        <div><span class="font-semibold">isScanning:</span> <span id="dbg-scanning">-</span></div>
-        <div><span class="font-semibold">RAW:</span> <span id="dbg-raw" class="break-all">-</span></div>
-        <div><span class="font-semibold">Parsed:</span> <span id="dbg-parsed">-</span></div>
-        <div><span class="font-semibold">Last error:</span> <span id="dbg-error">-</span></div>
-      </div>
-      <div class="mt-2 flex gap-2">
-        <button type="button" id="btn-debug-restart" class="flex-1 rounded-md bg-white border border-gray-300 px-3 py-2 font-bold">スキャナ再起動</button>
-        <button type="button" id="btn-debug-clear" class="flex-1 rounded-md bg-white border border-gray-300 px-3 py-2 font-bold">ログ消去</button>
-      </div>
-    </div>
-    <div class="flex justify-between items-center mb-2 shrink-0">
-      <h2 class="text-lg font-bold" id="scan-title">スキャン</h2>
-      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 確認済</div>
-    </div>
-
-    <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 260px;">
-      <div id="reader"></div>
-      <div class="qr-guide"><div class="qr-guide-box"></div></div>
-<div id="scan-overlay" class="absolute inset-0 flex flex-col gap-3 items-center justify-center text-white bg-black bg-opacity-60 hidden z-10 p-4">
-        <div class="text-center text-sm leading-relaxed">
-          <div class="font-bold mb-1">カメラ準備中…</div>
-          <div class="text-xs text-gray-200">許可ダイアログが出たら「許可」を押してください</div>
-        </div>
-        <button onclick="App.retryScanner()" class="bg-white text-black font-bold px-4 py-2 rounded-lg">もう一度カメラ起動</button>
-      </div>
-
-      <div id="scan-error" class="absolute inset-0 hidden z-10 p-4 bg-black bg-opacity-70 text-white">
-        <div class="text-center">
-          <div class="text-lg font-bold mb-2">カメラを起動できません</div>
-          <div class="text-xs text-gray-200 mb-4">
-            iPhoneは<strong>HTTPS</strong>が必要です。<br>
-            例：Netlify / GitHub Pages などで公開して開いてください。
-          </div>
-          <div class="flex gap-2 justify-center">
-            <button onclick="App.retryScanner()" class="bg-white text-black font-bold px-4 py-2 rounded-lg">再試行</button>
-            <button onclick="App.manualInputCode()" class="bg-gray-800 border border-gray-600 text-white font-bold px-4 py-2 rounded-lg">手入力</button>
+    <main>
+      <!-- HOME -->
+      <section id="screen-home">
+        <div class="h1">現在の状況</div>
+        <div class="card">
+          <div class="kpi">
+            <div style="font-weight:800;color:#1f2937">本日の購入確定</div>
+            <div class="big" id="kpiCount">0</div>
+            <div class="sub">購入候補 点数 / 合計金額：<b id="kpiTotal">¥0</b></div>
+            <div class="sub">※取った商品を「持ち出し」でスキャンしてください</div>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="flex gap-2 mb-3 shrink-0">
-      <button id="btn-mark-empty" onclick="App.markCurrentAsEmpty()" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-bold text-sm">この枠は「空」</button>
-      <button onclick="App.manualInputCode()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold text-sm">コード手入力</button>
-    </div>
+        <div class="card">
+          <button class="btn" id="goTakeout"><span class="icon">📦</span>持ち出し<span style="margin-left:auto">→</span></button>
+          <div style="height:10px"></div>
+          <button class="btn secondary" id="goNext"><span class="icon">🚚</span>次回便の確認<span style="margin-left:auto">→</span></button>
+          <div style="height:10px"></div>
+          <button class="btn secondary" id="goClose"><span class="icon">🗓️</span>月末締め<span style="margin-left:auto">→</span></button>
+        </div>
 
-    <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700 mb-3 shrink-0">
-      <div class="font-bold mb-1">スキャンのコツ</div>
-      <ul class="list-disc pl-5 space-y-1">
-        <li>QRコードを枠内に収めてスキャン</li>
-        <li>同じQRを2回スキャンしても「重複」として弾きます</li>
-      </ul>
-    </div>
+        <div class="card">
+          <div style="font-weight:800;margin-bottom:8px">サマリー</div>
+          <div class="muted">次回発送予定：-</div>
+          <div class="muted">同梱締切：-</div>
+          <div class="muted">アカウント状態：-</div>
+        </div>
+      </section>
 
-    <div class="box-grid mb-6 shrink-0" id="scan-grid"></div>
+      <!-- TAKEOUT -->
+      <section id="screen-takeout" style="display:none">
+        <div class="row" style="margin:8px 2px 10px;">
+          <div class="h1" style="margin:0">持ち出しスキャン</div>
+          <div class="pill ok" id="readyPill">準備完了</div>
+        </div>
 
-    <div class="sticky-action">
-      <button id="btn-scan-confirm" onclick="App.confirmScan()"
-              class="w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0" disabled>
-        すべて確認して確定
-      </button>
-    </div>
+        <div class="row" style="margin:0 2px 10px">
+          <div class="muted">QRコードを枠内に入れてスキャン</div>
+          <div class="pill" id="pickedPill">購入候補 0点</div>
+        </div>
+
+        <div class="scannerWrap card" style="padding:0">
+          <div id="reader"></div>
+          <div class="guide" id="guide"></div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:800;margin-bottom:6px">スキャンのコツ</div>
+          <div class="muted">・QRを枠の中心に入れる（10〜20cmが目安）</div>
+          <div class="muted">・反射があると読めないので少し斜めにする</div>
+        </div>
+
+        <div class="card">
+          <div class="row">
+            <div style="font-weight:800">今回の購入候補</div>
+            <div class="muted">合計：<b id="totalYen">¥0</b></div>
+          </div>
+          <div class="list" id="pickedList"></div>
+
+          <div class="hr"></div>
+
+          <button class="btn" id="confirmBtn" disabled>購入確定（0点）</button>
+          <div style="height:10px"></div>
+          <div class="split">
+            <button class="btn secondary small" id="clearBtn">リセット</button>
+            <button class="btn secondary small" id="backHomeBtn">ホームへ戻る</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- NEXT -->
+      <section id="screen-next" style="display:none">
+        <div class="h1">次回便</div>
+        <div class="card">
+          <div style="font-weight:800;margin-bottom:8px">次回便の確認</div>
+          <div class="muted">テスト段階のため、ここは後で実装します。</div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section id="screen-settings" style="display:none">
+        <div class="h1">設定</div>
+
+        <div class="card settingsArea">
+          <div class="row">
+            <div style="font-weight:800">商品マスタ（JSON）</div>
+            <div class="pill" id="masterPill">未設定</div>
+          </div>
+          <div class="muted" style="margin-top:6px">
+            SKUだけだと購入時に何を取ったか分かりにくいので、ここに「コード番号→商品情報」のマスタを貼ると、<b>商品名/価格/賞味期限</b>を表示できます。
+          </div>
+
+          <div style="margin-top:10px">
+            <textarea id="masterJson"></textarea>
+          </div>
+
+          <div class="split" style="margin-top:10px">
+            <button class="btn small" id="saveMaster">保存</button>
+            <button class="btn secondary small" id="loadExample">例を入れる</button>
+          </div>
+
+          <div class="hr"></div>
+
+          <div class="muted">
+            貼り付けるJSON形式（例）：
+            <span class="tag">{"SKU001-01":{"name":"商品名","price":760,"exp":"2026/7/1"}}</span>
+          </div>
+        </div>
+
+        <div class="card">
+          <div style="font-weight:800;margin-bottom:8px">デバッグ</div>
+          <div class="muted">スキャンが読めない場合は、まずこの設定のマスタではなく「カメラ枠内に入るか」「反射がないか」を確認してください。</div>
+        </div>
+      </section>
+
+      <!-- CLOSE -->
+      <section id="screen-close" style="display:none">
+        <div class="h1">月末締め</div>
+        <div class="card">
+          <div style="font-weight:800;margin-bottom:8px">月末締め</div>
+          <div class="muted">テスト段階のため、ここは後で実装します。</div>
+        </div>
+      </section>
+    </main>
   </div>
 
-  <!-- B3: Restock result -->
-  <div id="screen-restock-result" class="screen p-4 justify-center">
-    <div class="text-center mb-6 shrink-0">
-      <div class="text-5xl mb-2">✅</div>
-      <h2 class="text-2xl font-bold text-gray-800">補充を確定しました</h2>
-      <p class="text-sm text-gray-500 mt-2" id="result-bundle-msg"></p>
+  <nav>
+    <div class="tabs">
+      <div class="tab active" data-tab="home"><div class="icon">🏠</div><div>ホーム</div></div>
+      <div class="tab" data-tab="takeout"><div class="icon">📦</div><div>持ち出し</div></div>
+      <div class="tab" data-tab="next"><div class="icon">🚚</div><div>次回便</div></div>
+      <div class="tab" data-tab="settings"><div class="icon">⚙️</div><div>設定</div></div>
     </div>
-
-    <div class="bg-white border rounded-xl p-5 shadow-sm mb-6 shrink-0">
-      <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">今回の便の請求確定額</h3>
-      <div class="space-y-2 text-sm">
-        <div class="flex justify-between">
-          <span class="text-gray-600">商品代 (<span id="result-items-count">0</span>点)</span>
-          <span class="font-bold" id="result-items-price">¥0</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-gray-600">補充手数料</span>
-          <span class="font-bold" id="result-fee">¥0</span>
-        </div>
-        <div class="flex justify-between">
-          <span class="text-gray-600">送料 (<span id="result-shipping-region"></span>)</span>
-          <span class="font-bold" id="result-shipping-cost">¥0</span>
-        </div>
-        <div class="border-t pt-2 mt-2 flex justify-between items-end">
-          <span class="font-bold text-gray-800">合計</span>
-          <span class="text-2xl font-extrabold text-blue-600" id="result-total">¥0</span>
-        </div>
-      </div>
-      <p class="text-xs text-gray-400 mt-3 text-center">※ご登録のクレジットカードへ請求されます（検証用ダミー）</p>
-    </div>
-
-    <button onclick="App.navigate('home')" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl mt-4 shrink-0">ホームへ戻る</button>
-  </div>
-
-  <!-- C: Shipment -->
-  <div id="screen-shipment" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4 shrink-0">次回便の状況</h2>
-    <div class="bg-blue-50 border border-blue-100 rounded-xl p-3 text-xs text-blue-800 mb-3 shrink-0" id="shipment-eta-top">-</div>
-    <div id="shipment-content" class="shrink-0"></div>
-  </div>
-
-  <!-- D1: End of month intro -->
-  <div id="screen-endofmonth-intro" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4 shrink-0">月末締めスキャン</h2>
-    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-800 space-y-3 shrink-0">
-      <p class="font-bold">⚠️ 月に1度の在庫確認です</p>
-      <p>毎月末、実際に家にある商品の数を確定させるためのスキャンです。未実施の場合、翌月の補充が停止されます。</p>
-    </div>
-    <div class="flex-1 flex flex-col justify-end">
-      <button onclick="App.startScanMode('endofmonth')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md mt-4 shrink-0">締めスキャンを開始</button>
-    </div>
-  </div>
-
-  <!-- D3: End of month result -->
-  <div id="screen-endofmonth-result" class="screen p-4 justify-center text-center">
-    <div class="text-5xl mb-4 shrink-0">🎉</div>
-    <h2 class="text-2xl font-bold text-gray-800 mb-2 shrink-0">月末締め完了</h2>
-    <p class="text-gray-600 mb-8 shrink-0">在庫の確認が完了しました。<br>引き続きBOXMARTをご利用いただけます。</p>
-    <button onclick="App.navigate('home')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md shrink-0">ホームへ戻る</button>
-  </div>
-
-  <!-- E: Settings -->
-  <div id="screen-settings" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4">アカウント設定</h2>
-
-    <div class="bg-white border rounded-xl p-4 mb-4">
-      <p class="text-sm text-gray-600 mb-3">
-        発送に必要な情報です。入力内容はこの端末に保存され、補充/締めスキャン送信データにも含まれます。
-      </p>
-
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs font-bold text-gray-600">お名前</label>
-          <input id="acc-name" type="text" placeholder="例）山田 太郎"
-            class="mt-1 w-full border rounded-lg px-3 py-3 text-base" />
-        </div>
-
-        <div>
-          <label class="text-xs font-bold text-gray-600">郵便番号</label>
-          <input id="acc-zip" type="text" inputmode="numeric" placeholder="例）0600000"
-            class="mt-1 w-full border rounded-lg px-3 py-3 text-base" />
-        </div>
-
-        <div>
-          <label class="text-xs font-bold text-gray-600">住所</label>
-          <textarea id="acc-address" rows="3" placeholder="例）北海道札幌市〇〇区〇〇 1-2-3"
-            class="mt-1 w-full border rounded-lg px-3 py-3 text-base"></textarea>
-        </div>
-
-        <div>
-          <label class="text-xs font-bold text-gray-600">電話番号</label>
-          <input id="acc-phone" type="tel" inputmode="tel" placeholder="例）09012345678"
-            class="mt-1 w-full border rounded-lg px-3 py-3 text-base" />
-        </div>
-
-        <div class="pt-2">
-          <button onclick="App.saveAccount()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg">
-            保存する
-          </button>
-          <p id="acc-saved-msg" class="text-[11px] text-green-700 text-center mt-2 hidden">保存しました</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="bg-gray-50 border rounded-xl p-4">
-      <h3 class="font-bold text-sm text-gray-700 mb-2">連携状況</h3>
-      <div class="text-xs text-gray-600 break-all mb-3">
-        送信先（固定）:<br>
-        <span class="font-mono" id="gas-url-fixed"></span>
-      </div>
-      <div class="text-xs text-gray-600 mb-3">
-        端末ユーザーID:<br>
-        <span class="font-mono" id="device-user-id"></span>
-      </div>
-
-      <button onclick="App.sendTestPing()" class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-3 rounded-lg">
-        送信テスト（ping）
-      </button>
-      <p class="text-[11px] text-gray-500 text-center mt-2">
-        ※数秒後にスプレッドシート（scan_log）に行が追加されます
-      </p>
-    </div>
-
-    <div class="mt-6">
-      <button onclick="App.resetData()" class="w-full bg-red-100 text-red-700 font-bold py-3 rounded-xl">
-        この端末のデータを初期化
-      </button>
-      <p class="text-[11px] text-gray-500 text-center mt-2">
-        ※検証用（在庫・便・アカウント情報が消えます）
-      </p>
-    </div>
-  </div>
-
-  <!-- Bottom nav -->
-  <nav class="bottom-nav">
-    <button class="nav-item active" onclick="App.navigate('home')" id="nav-home">
-      <span class="nav-icon">🏠</span><span>ホーム</span>
-    </button>
-    <button class="nav-item" onclick="App.navigate('restock-intro')" id="nav-restock">
-      <span class="nav-icon">📦</span><span>持ち出し</span>
-    </button>
-    <button class="nav-item" onclick="App.navigate('shipment')" id="nav-shipment">
-      <span class="nav-icon">🚚</span><span>次回便</span>
-    </button>
-    <button class="nav-item" onclick="App.navigate('settings')" id="nav-settings">
-      <span class="nav-icon">⚙️</span><span>設定</span>
-    </button>
   </nav>
-    <div id="toast"></div>
-</div>
 
+  <!-- html5-qrcode -->
+  <script src="https://unpkg.com/html5-qrcode@2.3.10/html5-qrcode.min.js"></script>
 
-<script>
-(function(){
-  function qs(sel, root){ return (root||document).querySelector(sel); }
-  function qsa(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
+  <script>
+    // ---------- state ----------
+    const SCREENS = ["home","takeout","next","settings","close"];
+    let scanner = null;
+    let scanning = false;
+    let picked = []; // {code, raw, ts}
+    let master = {}; // code -> {name, price, exp}
 
-  function showToast(msg){
-    var t = qs('#toast');
-    if(!t){ alert(msg); return; }
-    t.textContent = msg;
-    t.style.display = 'block';
-    clearTimeout(showToast._tm);
-    showToast._tm = setTimeout(function(){ t.style.display='none'; }, 2200);
-  }
+    const $ = (id)=>document.getElementById(id);
+    const toastEl = $("toast");
 
-  // --- App state ---
-  var state = {
-    mode: 'takeout',
-    isScanning: false,
-    scanned: [], // {sku, raw, ts}
-    html5: null,
-    lastText: ''
-  };
-
-  function fmtYen(n){
-    try { return '¥' + (Number(n)||0).toLocaleString('ja-JP'); }
-    catch(e){ return '¥' + (Number(n)||0); }
-  }
-
-  // Optional local product master (SKU -> info). Empty by default.
-  // You can later paste exported JSON here.
-  var PRODUCT_MASTER = window.PRODUCT_MASTER || {};
-
-  function parseBoxmart(text){
-    // Expected: BOXMART:ITEM=SKU001-01:SIG=xxxx
-    var s = String(text||'').trim();
-    if(!s) return null;
-    if(s.indexOf('BOXMART:') !== 0) return null;
-    var m = s.match(/ITEM=([^:|]+)(?::|\||$)/);
-    var item = m ? m[1] : '';
-    if(!item) return null;
-    return { item_id: item, raw: s };
-  }
-
-  function activateScreen(id){
-    qsa('.screen').forEach(function(el){ el.classList.remove('active'); });
-    var target = qs('#screen-' + id);
-    if(target) target.classList.add('active');
-
-    qsa('.nav-item').forEach(function(btn){ btn.classList.remove('active'); });
-    var nav = qs('#nav-' + (id==='restock-intro' ? 'restock' : id));
-    if(nav) nav.classList.add('active');
-
-    try{ history.replaceState(null,'','#'+id); }catch(e){}
-  }
-
-  function updateHome(){
-    var el = qs('#home-empty-slots');
-    if(el){
-      el.textContent = state.scanned.length + ' 件';
-    }
-    var cond = qs('#home-restock-condition');
-    if(cond){
-      cond.textContent = '※取った商品をスキャンして「購入確定」';
-    }
-  }
-
-  function configureTakeoutUI(){
-    // Remove/disable shelf-counting UI for takeout
-    var btnEmpty = qs('#btn-mark-empty');
-    if(btnEmpty) btnEmpty.style.display = 'none';
-
-    var tips = qs('#screen-scan .bg-gray-50'); // tips box
-    if(tips) tips.style.display = 'none';
-
-    var grid = qs('#scan-grid');
-    if(grid) grid.style.display = 'none';
-
-    var prog = qs('#scan-progress');
-    if(prog) prog.textContent = '購入候補 0点';
-
-    var title = qs('#scan-title');
-    if(title) title.textContent = '持ち出しスキャン';
-
-    var confirm = qs('#btn-scan-confirm');
-    if(confirm){
-      confirm.textContent = '購入確定（0点）';
-      confirm.disabled = true;
-      confirm.className = 'w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0';
+    function toast(msg){
+      toastEl.textContent = msg;
+      toastEl.classList.add("show");
+      clearTimeout(toastEl._t);
+      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1600);
     }
 
-    // reader fixed height & prevent overlays stealing taps
-    var readerWrap = qs('#reader');
-    if(readerWrap){
-      readerWrap.style.height = '220px';
-      readerWrap.style.overflow = 'hidden';
-      readerWrap.style.position = 'relative';
-    }
-  }
-
-  function renderScannedList(){
-    // Create list container under camera if missing
-    var host = qs('#screen-scan');
-    if(!host) return;
-    var existing = qs('#takeout-list');
-    if(!existing){
-      var container = document.createElement('div');
-      container.id = 'takeout-list';
-      container.className = 'bg-white border rounded-xl p-3 text-sm text-gray-800 mb-4';
-      container.innerHTML = '<div class="font-bold mb-2">今回の購入候補</div><div id="takeout-items" class="space-y-2"></div><div class="mt-3 pt-3 border-t flex justify-between"><span class="text-gray-600">合計</span><span class="font-extrabold" id="takeout-total">¥0</span></div>';
-      // insert before sticky-action
-      var sticky = qs('#screen-scan .sticky-action');
-      if(sticky) host.insertBefore(container, sticky);
-      else host.appendChild(container);
+    function yen(n){
+      const x = Number(n||0);
+      try { return x.toLocaleString("ja-JP",{style:"currency",currency:"JPY"}); }
+      catch(e){ return "¥"+Math.round(x); }
     }
 
-    var itemsEl = qs('#takeout-items');
-    var totalEl = qs('#takeout-total');
-    if(!itemsEl || !totalEl) return;
-
-    itemsEl.innerHTML = '';
-    var total = 0;
-
-    state.scanned.forEach(function(it, idx){
-      var info = PRODUCT_MASTER[it.sku] || PRODUCT_MASTER[it.sku.split('-')[0]] || null;
-      var name = info && info.name ? info.name : it.sku;
-      var price = info && info.price ? Number(info.price)||0 : 0;
-      var exp = info && info.exp ? info.exp : '';
-      total += price;
-
-      var row = document.createElement('div');
-      row.className = 'flex gap-2 items-start';
-      row.innerHTML =
-        '<div class="mt-0.5 text-xs font-bold text-gray-400 w-5">'+(idx+1)+'</div>' +
-        '<div class="flex-1">' +
-          '<div class="font-bold leading-snug">'+ escapeHtml(name) +'</div>' +
-          '<div class="text-xs text-gray-500 mt-0.5">コード: '+ escapeHtml(it.sku) + (exp ? ' / 期限: '+escapeHtml(exp):'') +'</div>' +
-        '</div>' +
-        '<div class="font-extrabold whitespace-nowrap">'+ fmtYen(price) +'</div>';
-      itemsEl.appendChild(row);
-    });
-
-    totalEl.textContent = fmtYen(total);
-
-    var prog = qs('#scan-progress');
-    if(prog) prog.textContent = '購入候補 ' + state.scanned.length + '点';
-
-    var confirm = qs('#btn-scan-confirm');
-    if(confirm){
-      confirm.textContent = '購入確定（' + state.scanned.length + '点）';
-      if(state.scanned.length>0){
-        confirm.disabled = false;
-        confirm.className = 'w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md transition shrink-0';
-      }else{
-        confirm.disabled = true;
-        confirm.className = 'w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0';
-      }
+    function parseCodeFromRaw(raw){
+      // Accept:
+      // BOXMART:ITEM=SKU001-01:SIG=xxxx
+      // or plain SKU001-01
+      const s = String(raw||"").trim();
+      const m1 = s.match(/ITEM=([A-Z0-9]+-\d+)/i);
+      if(m1) return m1[1].toUpperCase();
+      const m2 = s.match(/\b(SKU\d{3}-\d{2})\b/i);
+      if(m2) return m2[1].toUpperCase();
+      return "";
     }
 
-    updateHome();
-  }
-
-  function escapeHtml(s){
-    return String(s||'').replace(/[&<>"]/g, function(c){
-      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c] || c;
-    });
-  }
-
-  function stopScanner(){
-    state.isScanning = false;
-    var overlay = qs('#scan-overlay');
-    if(overlay) overlay.classList.add('hidden');
-    if(state.html5){
+    function loadMaster(){
       try{
-        return state.html5.stop().then(function(){ try{ state.html5.clear(); }catch(e){}; });
-      }catch(e){
-        try{ state.html5.clear(); }catch(e2){}
-      }
-    }
-    return Promise.resolve();
-  }
-
-  function startScanner(){
-    var overlay = qs('#scan-overlay');
-    var err = qs('#scan-error');
-    if(overlay) overlay.classList.remove('hidden');
-    if(err) err.classList.add('hidden');
-
-    if(!window.Html5Qrcode){
-      if(overlay) overlay.classList.add('hidden');
-      showToast('スキャナライブラリが読み込めません');
-      return;
-    }
-
-    // Create once
-    if(!state.html5){
-      try{
-        state.html5 = new Html5Qrcode('reader');
-      }catch(e){
-        if(overlay) overlay.classList.add('hidden');
-        showToast('スキャナ初期化に失敗: ' + (e && e.message ? e.message : e));
-        return;
-      }
-    }
-
-    // iOS: prevent video overlay from stealing taps
-    // (we still need the camera view to receive frames, so only disable pointer events)
-    setTimeout(function(){
-      qsa('#reader video, #reader canvas').forEach(function(el){
-        el.setAttribute('playsinline','true');
-        el.setAttribute('webkit-playsinline','true');
-        el.style.pointerEvents = 'none';
-      });
-    }, 0);
-
-    state.isScanning = true;
-
-    var config = { fps: 15, qrbox: function(vw, vh){ var m=Math.min(vw, vh); var s=Math.floor(m*0.85); s=Math.max(260, Math.min(s, 380)); return { width: s, height: s }; }, disableFlip: true };
-    var camera = { facingMode: "environment" };
-
-    state.html5.start(camera, config, function(decodedText){
-      if(!decodedText) return;
-      if(decodedText === state.lastText) return;
-      state.lastText = decodedText;
-
-      var parsed = parseBoxmart(decodedText);
-      if(!parsed){ return; }
-
-      var sku = parsed.item_id;
-      // session duplicate prevention
-      for(var i=0;i<state.scanned.length;i++){
-        if(state.scanned[i].sku === sku){
-          showToast('重複: ' + sku);
+        const txt = localStorage.getItem("BOXMART_MASTER_JSON") || "";
+        if(!txt){
+          master = {};
+          $("masterPill").textContent = "未設定";
+          $("masterPill").className = "pill";
           return;
         }
-      }
-
-      state.scanned.push({ sku: sku, raw: parsed.raw, ts: Date.now() });
-      showToast('読み取り: ' + sku);
-      renderScannedList();
-    }, function(errorMessage){
-      // ignore noisy scan errors
-    }).then(function(){
-      if(overlay) overlay.classList.add('hidden');
-      // hide "empty" button for takeout
-      var btnEmpty = qs('#btn-mark-empty');
-      if(btnEmpty) btnEmpty.style.display='none';
-    }).catch(function(e){
-      state.isScanning = false;
-      if(overlay) overlay.classList.add('hidden');
-      if(err) err.classList.remove('hidden');
-      showToast('カメラ起動に失敗: ' + (e && e.message ? e.message : e));
-    });
-  }
-
-  // --- Public API (onclick) ---
-  window.App = window.App || {};
-  window.App.navigate = function(screen){
-    // stop scanner when leaving scan
-    if(screen !== 'scan'){ stopScanner(); }
-    activateScreen(screen);
-  };
-
-  window.App.startScanMode = function(){
-    // Takeout flow: go to scan and start camera on demand
-    activateScreen('scan');
-    configureTakeoutUI();
-    // delay start to allow layout settle
-    setTimeout(function(){
-      startScanner();
-      renderScannedList();
-    }, 100);
-  };
-
-  window.App.retryScanner = function(){
-    stopScanner().then(function(){
-      setTimeout(function(){ startScanner(); }, 120);
-    });
-  };
-
-  window.App.manualInputCode = function(){
-    var code = prompt('コード番号を入力してください（例: SKU001-01）');
-    if(!code) return;
-    code = String(code).trim();
-    if(!code) return;
-    // Prevent dup
-    for(var i=0;i<state.scanned.length;i++){
-      if(state.scanned[i].sku === code){
-        showToast('重複: ' + code); return;
+        const obj = JSON.parse(txt);
+        master = obj && typeof obj === "object" ? obj : {};
+        const n = Object.keys(master).length;
+        $("masterPill").textContent = `登録済み ${n}件`;
+        $("masterPill").className = "pill ok";
+      }catch(e){
+        master = {};
+        $("masterPill").textContent = "JSONエラー";
+        $("masterPill").className = "pill danger";
       }
     }
-    state.scanned.push({ sku: code, raw: 'MANUAL:'+code, ts: Date.now() });
-    renderScannedList();
-  };
 
-  window.App.confirmScan = function(){
-    if(state.scanned.length===0){ showToast('購入候補がありません'); return; }
-    // For now, just show result screen; sales logging is handled server-side later.
-    stopScanner().then(function(){
-      // Fill result UI if exists
-      var c = qs('#result-items-count'); if(c) c.textContent = String(state.scanned.length);
-      var p = qs('#result-items-price');
-      var total = 0;
-      state.scanned.forEach(function(it){
-        var info = PRODUCT_MASTER[it.sku] || PRODUCT_MASTER[it.sku.split('-')[0]] || null;
-        total += info && info.price ? Number(info.price)||0 : 0;
-      });
-      if(p) p.textContent = fmtYen(total);
-      var h = qs('#screen-restock-result h2'); if(h) h.textContent = '購入を確定しました';
-      var msg = qs('#result-bundle-msg'); if(msg) msg.textContent = 'ご利用ありがとうございます。';
-      activateScreen('restock-result');
-      updateHome();
-    });
-  };
-
-  // no-op in takeout
-  window.App.markCurrentAsEmpty = function(){ showToast('持ち出しモードでは使用しません'); };
-
-  // Settings stubs (can be wired to GAS later)
-  window.App.saveAccount = function(){ showToast('保存しました（デモ）'); };
-  window.App.sendTestPing = function(){ showToast('送信しました（デモ）'); };
-  window.App.resetData = function(){
-    if(confirm('購入候補をリセットしますか？')){
-      state.scanned = [];
-      renderScannedList();
-      showToast('リセットしました');
+    function renderMasterTextarea(){
+      const txt = localStorage.getItem("BOXMART_MASTER_JSON") || "";
+      $("masterJson").value = txt;
     }
-  };
 
-  // iOS: bind touchend->onclick fallback for nav/buttons
-  function bindFastTap(){
-    document.addEventListener('touchend', function(ev){
-      var t = ev.target;
-      for(var i=0;i<6 && t && t!==document.body;i++){
-        if(t.tagName==='BUTTON' || t.tagName==='A' || (t.classList && t.classList.contains('nav-item'))){
-          try{ if(typeof t.onclick==='function') t.onclick.call(t, ev); }
-          catch(e){}
-          break;
+    function setStatusPill(){
+      $("statusPill").textContent = "利用中";
+      $("statusPill").className = "pill ok";
+    }
+
+    function updateKpi(){
+      const total = picked.reduce((a,x)=>a + (Number((master[x.code]||{}).price)||0), 0);
+      $("kpiCount").textContent = picked.length + "/10";
+      $("kpiTotal").textContent = yen(total);
+      $("pickedPill").textContent = `購入候補 ${picked.length}点`;
+      $("totalYen").textContent = yen(total);
+      $("confirmBtn").disabled = picked.length === 0;
+      $("confirmBtn").textContent = `購入確定（${picked.length}点）`;
+    }
+
+    function renderPicked(){
+      const list = $("pickedList");
+      list.innerHTML = "";
+      if(picked.length === 0){
+        const div = document.createElement("div");
+        div.className = "muted";
+        div.textContent = "まだスキャンされていません。";
+        list.appendChild(div);
+        return;
+      }
+      picked.forEach((x, idx)=>{
+        const info = master[x.code] || {};
+        const el = document.createElement("div");
+        el.className = "item";
+        const left = document.createElement("div");
+        left.className = "left";
+        const title = document.createElement("div");
+        title.className = "title";
+        title.textContent = info.name ? info.name : x.code;
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        const t1 = document.createElement("span"); t1.className="tag"; t1.textContent = x.code;
+        meta.appendChild(t1);
+        if(info.price!=null){
+          const t2 = document.createElement("span"); t2.className="tag"; t2.textContent = yen(info.price);
+          meta.appendChild(t2);
         }
-        t = t.parentNode;
+        if(info.exp){
+          const t3 = document.createElement("span"); t3.className="tag"; t3.textContent = "賞味: "+info.exp;
+          meta.appendChild(t3);
+        }
+        left.appendChild(title);
+        left.appendChild(meta);
+
+        const del = document.createElement("button");
+        del.className = "btn secondary small inline";
+        del.textContent = "削除";
+        del.onclick = ()=>{
+          picked = picked.filter((_,i)=>i!==idx);
+          renderPicked();
+          updateKpi();
+        };
+
+        el.appendChild(left);
+        el.appendChild(del);
+        list.appendChild(el);
+      });
+    }
+
+    function showScreen(name){
+      SCREENS.forEach(s=>{
+        const el = document.getElementById("screen-"+s);
+        if(el) el.style.display = (s===name) ? "" : "none";
+      });
+      document.querySelectorAll(".tab").forEach(t=>{
+        t.classList.toggle("active", t.dataset.tab === name);
+      });
+
+      // Scanner lifecycle: only run on takeout screen
+      if(name === "takeout"){
+        startScanner();
+      }else{
+        stopScanner();
       }
-    }, {passive:true});
-  }
 
-  function init(){
-    bindFastTap();
-    configureTakeoutUI();
-    renderScannedList();
-    updateHome();
-    var sb = qs('#status-badge');
-    if(sb){ sb.textContent = '準備完了'; sb.className = 'px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-800'; }
-    var h = (location.hash||'').replace('#','');
-    if(h){ activateScreen(h); }
-  }
+      if(name === "settings"){
+        loadMaster();
+        renderMasterTextarea();
+      }
+      updateKpi();
+    }
 
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
-})();
-</script>
+    // ---------- scanner ----------
+    function computeQrBox(){
+      const w = Math.min(window.innerWidth, 520);
+      const h = Math.min(window.innerHeight, 900);
+      const base = Math.floor(Math.min(w, h) * 0.55);
+      const size = Math.max(240, Math.min(base, 340));
+      return { width: size, height: size };
+    }
 
+    async function startScanner(){
+      if(scanning) return;
+      scanning = true;
+
+      const readerId = "reader";
+      const qrbox = computeQrBox();
+
+      // iOS: prefer environment camera if available
+      const config = {
+        fps: 12,
+        qrbox,
+        aspectRatio: 1.0,
+        disableFlip: true,
+      };
+
+      // Create once
+      if(!scanner){
+        scanner = new Html5Qrcode(readerId);
+      }
+
+      try{
+        const cameras = await Html5Qrcode.getCameras();
+        let cameraId = null;
+        if(cameras && cameras.length){
+          // Try to pick back camera
+          const back = cameras.find(c => /back|rear|environment/i.test(c.label));
+          cameraId = (back || cameras[0]).id;
+        }
+
+        const constraints = cameraId
+          ? { deviceId: { exact: cameraId } }
+          : { facingMode: "environment" };
+
+        await scanner.start(
+          constraints,
+          config,
+          onScanSuccess,
+          () => {} // ignore per-frame errors
+        );
+
+        $("readyPill").textContent = "準備完了";
+        $("readyPill").className = "pill ok";
+      }catch(e){
+        $("readyPill").textContent = "カメラ起動失敗";
+        $("readyPill").className = "pill danger";
+        toast("カメラを起動できませんでした（権限/HTTPSを確認）");
+        console.error(e);
+      }
+    }
+
+    async function stopScanner(){
+      if(!scanner || !scanning) return;
+      scanning = false;
+      try{ await scanner.stop(); }catch(e){}
+      try{ await scanner.clear(); }catch(e){}
+    }
+
+    function onScanSuccess(decodedText){
+      const code = parseCodeFromRaw(decodedText);
+      if(!code){
+        toast("QRの形式を判別できませんでした");
+        return;
+      }
+
+      // Duplicate guard
+      if(picked.some(x => x.code === code)){
+        toast("重複：すでに追加済みです");
+        return;
+      }
+
+      const info = master[code] || {};
+      picked.push({ code, raw: decodedText, ts: Date.now() });
+      renderPicked();
+      updateKpi();
+
+      // Feedback
+      if(info.name){
+        toast(`追加：${info.name}（${yen(info.price||0)}）`);
+      }else{
+        toast(`追加：${code}`);
+      }
+
+      // Throttle: avoid repeated reads on same QR
+      if(scanner){
+        try{ scanner.pause(true); }catch(e){}
+        setTimeout(()=>{ try{ scanner.resume(); }catch(e){} }, 900);
+      }
+    }
+
+    // ---------- actions ----------
+    document.querySelectorAll(".tab").forEach(t=>{
+      t.addEventListener("click", ()=>showScreen(t.dataset.tab));
+    });
+
+    $("goTakeout").onclick = ()=>showScreen("takeout");
+    $("goNext").onclick = ()=>showScreen("next");
+    $("goClose").onclick = ()=>showScreen("close");
+    $("backHomeBtn").onclick = ()=>showScreen("home");
+
+    $("clearBtn").onclick = ()=>{
+      picked = [];
+      renderPicked();
+      updateKpi();
+      toast("リセットしました");
+    };
+
+    $("confirmBtn").onclick = ()=>{
+      // In this prototype, just confirm locally
+      const total = picked.reduce((a,x)=>a + (Number((master[x.code]||{}).price)||0), 0);
+      toast(`購入確定：${picked.length}点 / ${yen(total)}`);
+      // TODO: send to GAS endpoint
+      picked = [];
+      renderPicked();
+      updateKpi();
+    };
+
+    $("saveMaster").onclick = ()=>{
+      const txt = $("masterJson").value.trim();
+      if(!txt){
+        localStorage.removeItem("BOXMART_MASTER_JSON");
+        loadMaster();
+        toast("マスタをクリアしました");
+        return;
+      }
+      try{
+        JSON.parse(txt);
+        localStorage.setItem("BOXMART_MASTER_JSON", txt);
+        loadMaster();
+        toast("マスタを保存しました");
+      }catch(e){
+        toast("JSONの形式が正しくありません");
+      }
+    };
+
+    $("loadExample").onclick = ()=>{
+      const ex = {
+        "SKU001-01": { "name":"おいしい缶詰牛肉のデミグラスソース味", "price":760, "exp":"2026/7/1" },
+        "SKU003-01": { "name":"びらとり和牛カレー（中辛）", "price":680, "exp":"2027/5/25" }
+      };
+      $("masterJson").value = JSON.stringify(ex, null, 2);
+      toast("例を入力しました（保存で有効化）");
+    };
+
+    // ---------- boot ----------
+    (function init(){
+      setStatusPill();
+      loadMaster();
+      renderPicked();
+      updateKpi();
+      // Start on home
+      showScreen("home");
+
+      // Recompute qrbox on rotate (iOS)
+      window.addEventListener("orientationchange", ()=>{
+        if(document.getElementById("screen-takeout").style.display !== "none"){
+          stopScanner().then(()=>startScanner());
+        }
+      });
+      window.addEventListener("resize", ()=>{
+        // Only on takeout screen; cheap debounce
+        if(document.getElementById("screen-takeout").style.display !== "none"){
+          clearTimeout(window._rz);
+          window._rz = setTimeout(()=>{ stopScanner().then(()=>startScanner()); }, 400);
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
