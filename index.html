@@ -149,13 +149,7 @@
     button { touch-action: manipulation; }
   
         /* QRガイド（見えない問題の保険：常に上に表示） */
-        .qr-guide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;}
-        .qr-guide-box{width:220px;height:220px;border:3px solid rgba(255,255,255,.25);border-radius:18px;box-shadow:0 0 0 2000px rgba(0,0,0,.08);}
-        .qr-guide-corner{position:absolute;width:26px;height:26px;border-color:rgba(255,255,255,.95);border-style:solid;}
-        .qr-guide-corner.tl{border-width:4px 0 0 4px;top:calc(50% - 110px - 2px);left:calc(50% - 110px - 2px);border-top-left-radius:8px;}
-        .qr-guide-corner.tr{border-width:4px 4px 0 0;top:calc(50% - 110px - 2px);right:calc(50% - 110px - 2px);border-top-right-radius:8px;}
-        .qr-guide-corner.bl{border-width:0 0 4px 4px;bottom:calc(50% - 110px - 2px);left:calc(50% - 110px - 2px);border-bottom-left-radius:8px;}
-        .qr-guide-corner.br{border-width:0 4px 4px 0;bottom:calc(50% - 110px - 2px);right:calc(50% - 110px - 2px);border-bottom-right-radius:8px;}
+        /* v14: removed custom overlay guide (html5-qrcode already renders a guide box) */
 
         /* トースト */
         #toast{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(110px + env(safe-area-inset-bottom));background:rgba(17,24,39,.95);color:#fff;padding:10px 14px;border-radius:999px;font-size:13px;font-weight:700;z-index:9999;max-width:92%;text-align:center;display:none;}
@@ -221,7 +215,7 @@
 </style>
 </head>
 <body>
-  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v13</div>
+  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v14</div>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
     BUILD TAKEOUT v11
   </div>
@@ -339,8 +333,7 @@
 
     <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 220px;">
       <div id="reader"></div>
-            <div class="qr-guide" aria-hidden="true">
-                <div class="qr-guide-box"></div>
+            <!-- v14: removed duplicate guide overlay -->
                 <div class="qr-guide-corner tl"></div>
                 <div class="qr-guide-corner tr"></div>
                 <div class="qr-guide-corner bl"></div>
@@ -378,7 +371,7 @@
     <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700 mb-3 shrink-0">
       <div class="font-bold mb-1">スキャンのコツ</div>
       <ul class="list-disc pl-5 space-y-1">
-        <li>枠（1〜10）をタップして、どこに入っている商品かを選んでからスキャン</li>
+        <li>QRを枠に合わせてスキャンしてください（持ち出し型では枠の選択は不要です）</li>
         <li>同じQRを2回スキャンしても「重複」として弾きます</li>
       </ul>
     </div>
@@ -761,8 +754,22 @@
 
     state.isScanning = true;
 
-    var config = { fps: 10, qrbox: 200, disableFlip: true };
-    var camera = { facingMode: "environment" };
+    // iPhone: improve decode rate by using a larger, dynamic qrbox and slightly higher fps.
+// Also keep flips disabled (labels are printed).
+var config = {
+  fps: 15,
+  disableFlip: true,
+  aspectRatio: 1.0,
+  qrbox: function(viewfinderWidth, viewfinderHeight){
+    var minEdge = Math.min(viewfinderWidth, viewfinderHeight);
+    var size = Math.floor(minEdge * 0.72);
+    size = Math.max(220, Math.min(size, 320));
+    return { width: size, height: size };
+  }
+};
+// Prefer back camera.
+var camera = { facingMode: { ideal: "environment" } };
+
 
     state.html5.start(camera, config, function(decodedText){
       if(!decodedText) return;
