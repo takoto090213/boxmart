@@ -221,6 +221,7 @@
 </style>
 </head>
 <body>
+  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v13</div>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
     BUILD TAKEOUT v11
   </div>
@@ -543,9 +544,9 @@
     <div id="toast"></div>
 </div>
 
+
 <script>
 (function(){
-  // v12: ultra-safe navigation + click/touch binding for iOS
   function qs(sel, root){ return (root||document).querySelector(sel); }
   function qsa(sel, root){ return Array.prototype.slice.call((root||document).querySelectorAll(sel)); }
 
@@ -558,41 +559,325 @@
     showToast._tm = setTimeout(function(){ t.style.display='none'; }, 2200);
   }
 
+  // --- App state ---
+  var state = {
+    mode: 'takeout',
+    isScanning: false,
+    scanned: [], // {sku, raw, ts}
+    html5: null,
+    lastText: ''
+  };
+
+  function fmtYen(n){
+    try { return '¥' + (Number(n)||0).toLocaleString('ja-JP'); }
+    catch(e){ return '¥' + (Number(n)||0); }
+  }
+
+  // Optional local product master (SKU -> info). Empty by default.
+  // You can later paste exported JSON here.
+  var PRODUCT_MASTER = window.PRODUCT_MASTER || {};
+
+  function parseBoxmart(text){
+    // Expected: BOXMART:ITEM=SKU001-01:SIG=xxxx
+    var s = String(text||'').trim();
+    if(!s) return null;
+    if(s.indexOf('BOXMART:') !== 0) return null;
+    var m = s.match(/ITEM=([^:|]+)(?::|\||$)/);
+    var item = m ? m[1] : '';
+    if(!item) return null;
+    return { item_id: item, raw: s };
+  }
+
   function activateScreen(id){
     qsa('.screen').forEach(function(el){ el.classList.remove('active'); });
     var target = qs('#screen-' + id);
     if(target) target.classList.add('active');
 
-    // nav highlight
     qsa('.nav-item').forEach(function(btn){ btn.classList.remove('active'); });
     var nav = qs('#nav-' + (id==='restock-intro' ? 'restock' : id));
     if(nav) nav.classList.add('active');
 
-    // update URL hash (optional)
     try{ history.replaceState(null,'','#'+id); }catch(e){}
   }
 
-  // Define global App early so inline onclick always works.
+  function updateHome(){
+    var el = qs('#home-empty-slots');
+    if(el){
+      el.textContent = state.scanned.length + ' 件';
+    }
+    var cond = qs('#home-restock-condition');
+    if(cond){
+      cond.textContent = '※取った商品をスキャンして「購入確定」';
+    }
+  }
+
+  function configureTakeoutUI(){
+    // Remove/disable shelf-counting UI for takeout
+    var btnEmpty = qs('#btn-mark-empty');
+    if(btnEmpty) btnEmpty.style.display = 'none';
+
+    var tips = qs('#screen-scan .bg-gray-50'); // tips box
+    if(tips) tips.style.display = 'none';
+
+    var grid = qs('#scan-grid');
+    if(grid) grid.style.display = 'none';
+
+    var prog = qs('#scan-progress');
+    if(prog) prog.textContent = '購入候補 0点';
+
+    var title = qs('#scan-title');
+    if(title) title.textContent = '持ち出しスキャン';
+
+    var confirm = qs('#btn-scan-confirm');
+    if(confirm){
+      confirm.textContent = '購入確定（0点）';
+      confirm.disabled = true;
+      confirm.className = 'w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0';
+    }
+
+    // reader fixed height & prevent overlays stealing taps
+    var readerWrap = qs('#reader');
+    if(readerWrap){
+      readerWrap.style.height = '220px';
+      readerWrap.style.overflow = 'hidden';
+      readerWrap.style.position = 'relative';
+    }
+  }
+
+  function renderScannedList(){
+    // Create list container under camera if missing
+    var host = qs('#screen-scan');
+    if(!host) return;
+    var existing = qs('#takeout-list');
+    if(!existing){
+      var container = document.createElement('div');
+      container.id = 'takeout-list';
+      container.className = 'bg-white border rounded-xl p-3 text-sm text-gray-800 mb-4';
+      container.innerHTML = '<div class="font-bold mb-2">今回の購入候補</div><div id="takeout-items" class="space-y-2"></div><div class="mt-3 pt-3 border-t flex justify-between"><span class="text-gray-600">合計</span><span class="font-extrabold" id="takeout-total">¥0</span></div>';
+      // insert before sticky-action
+      var sticky = qs('#screen-scan .sticky-action');
+      if(sticky) host.insertBefore(container, sticky);
+      else host.appendChild(container);
+    }
+
+    var itemsEl = qs('#takeout-items');
+    var totalEl = qs('#takeout-total');
+    if(!itemsEl || !totalEl) return;
+
+    itemsEl.innerHTML = '';
+    var total = 0;
+
+    state.scanned.forEach(function(it, idx){
+      var info = PRODUCT_MASTER[it.sku] || PRODUCT_MASTER[it.sku.split('-')[0]] || null;
+      var name = info && info.name ? info.name : it.sku;
+      var price = info && info.price ? Number(info.price)||0 : 0;
+      var exp = info && info.exp ? info.exp : '';
+      total += price;
+
+      var row = document.createElement('div');
+      row.className = 'flex gap-2 items-start';
+      row.innerHTML =
+        '<div class="mt-0.5 text-xs font-bold text-gray-400 w-5">'+(idx+1)+'</div>' +
+        '<div class="flex-1">' +
+          '<div class="font-bold leading-snug">'+ escapeHtml(name) +'</div>' +
+          '<div class="text-xs text-gray-500 mt-0.5">コード: '+ escapeHtml(it.sku) + (exp ? ' / 期限: '+escapeHtml(exp):'') +'</div>' +
+        '</div>' +
+        '<div class="font-extrabold whitespace-nowrap">'+ fmtYen(price) +'</div>';
+      itemsEl.appendChild(row);
+    });
+
+    totalEl.textContent = fmtYen(total);
+
+    var prog = qs('#scan-progress');
+    if(prog) prog.textContent = '購入候補 ' + state.scanned.length + '点';
+
+    var confirm = qs('#btn-scan-confirm');
+    if(confirm){
+      confirm.textContent = '購入確定（' + state.scanned.length + '点）';
+      if(state.scanned.length>0){
+        confirm.disabled = false;
+        confirm.className = 'w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md transition shrink-0';
+      }else{
+        confirm.disabled = true;
+        confirm.className = 'w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0';
+      }
+    }
+
+    updateHome();
+  }
+
+  function escapeHtml(s){
+    return String(s||'').replace(/[&<>"]/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[c] || c;
+    });
+  }
+
+  function stopScanner(){
+    state.isScanning = false;
+    var overlay = qs('#scan-overlay');
+    if(overlay) overlay.classList.add('hidden');
+    if(state.html5){
+      try{
+        return state.html5.stop().then(function(){ try{ state.html5.clear(); }catch(e){}; });
+      }catch(e){
+        try{ state.html5.clear(); }catch(e2){}
+      }
+    }
+    return Promise.resolve();
+  }
+
+  function startScanner(){
+    var overlay = qs('#scan-overlay');
+    var err = qs('#scan-error');
+    if(overlay) overlay.classList.remove('hidden');
+    if(err) err.classList.add('hidden');
+
+    if(!window.Html5Qrcode){
+      if(overlay) overlay.classList.add('hidden');
+      showToast('スキャナライブラリが読み込めません');
+      return;
+    }
+
+    // Create once
+    if(!state.html5){
+      try{
+        state.html5 = new Html5Qrcode('reader');
+      }catch(e){
+        if(overlay) overlay.classList.add('hidden');
+        showToast('スキャナ初期化に失敗: ' + (e && e.message ? e.message : e));
+        return;
+      }
+    }
+
+    // iOS: prevent video overlay from stealing taps
+    // (we still need the camera view to receive frames, so only disable pointer events)
+    setTimeout(function(){
+      qsa('#reader video, #reader canvas').forEach(function(el){
+        el.setAttribute('playsinline','true');
+        el.setAttribute('webkit-playsinline','true');
+        el.style.pointerEvents = 'none';
+      });
+    }, 0);
+
+    state.isScanning = true;
+
+    var config = { fps: 10, qrbox: 200, disableFlip: true };
+    var camera = { facingMode: "environment" };
+
+    state.html5.start(camera, config, function(decodedText){
+      if(!decodedText) return;
+      if(decodedText === state.lastText) return;
+      state.lastText = decodedText;
+
+      var parsed = parseBoxmart(decodedText);
+      if(!parsed){ return; }
+
+      var sku = parsed.item_id;
+      // session duplicate prevention
+      for(var i=0;i<state.scanned.length;i++){
+        if(state.scanned[i].sku === sku){
+          showToast('重複: ' + sku);
+          return;
+        }
+      }
+
+      state.scanned.push({ sku: sku, raw: parsed.raw, ts: Date.now() });
+      showToast('読み取り: ' + sku);
+      renderScannedList();
+    }, function(errorMessage){
+      // ignore noisy scan errors
+    }).then(function(){
+      if(overlay) overlay.classList.add('hidden');
+      // hide "empty" button for takeout
+      var btnEmpty = qs('#btn-mark-empty');
+      if(btnEmpty) btnEmpty.style.display='none';
+    }).catch(function(e){
+      state.isScanning = false;
+      if(overlay) overlay.classList.add('hidden');
+      if(err) err.classList.remove('hidden');
+      showToast('カメラ起動に失敗: ' + (e && e.message ? e.message : e));
+    });
+  }
+
+  // --- Public API (onclick) ---
   window.App = window.App || {};
-  window.App.navigate = function(screen){ activateScreen(screen); };
-  window.App.startScanMode = function(){ showToast('スキャン機能はこの端末で調整中です（まず画面遷移を復旧しました）'); };
-  window.App.retryScanner = function(){ showToast('再試行（調整中）'); };
+  window.App.navigate = function(screen){
+    // stop scanner when leaving scan
+    if(screen !== 'scan'){ stopScanner(); }
+    activateScreen(screen);
+  };
+
+  window.App.startScanMode = function(){
+    // Takeout flow: go to scan and start camera on demand
+    activateScreen('scan');
+    configureTakeoutUI();
+    // delay start to allow layout settle
+    setTimeout(function(){
+      startScanner();
+      renderScannedList();
+    }, 100);
+  };
+
+  window.App.retryScanner = function(){
+    stopScanner().then(function(){
+      setTimeout(function(){ startScanner(); }, 120);
+    });
+  };
+
   window.App.manualInputCode = function(){
     var code = prompt('コード番号を入力してください（例: SKU001-01）');
-    if(code) showToast('入力: '+code);
+    if(!code) return;
+    code = String(code).trim();
+    if(!code) return;
+    // Prevent dup
+    for(var i=0;i<state.scanned.length;i++){
+      if(state.scanned[i].sku === code){
+        showToast('重複: ' + code); return;
+      }
+    }
+    state.scanned.push({ sku: code, raw: 'MANUAL:'+code, ts: Date.now() });
+    renderScannedList();
   };
-  window.App.confirmScan = function(){ showToast('購入確定（ダミー）'); };
-  window.App.saveAccount = function(){ showToast('保存（ダミー）'); };
-  window.App.sendTestPing = function(){ showToast('送信（ダミー）'); };
-  window.App.resetData = function(){ showToast('初期化（ダミー）'); };
-  window.App.markCurrentAsEmpty = function(){ showToast('空（無効）'); };
 
-  // iOS: bind touchend->click fallback for anything with onclick
+  window.App.confirmScan = function(){
+    if(state.scanned.length===0){ showToast('購入候補がありません'); return; }
+    // For now, just show result screen; sales logging is handled server-side later.
+    stopScanner().then(function(){
+      // Fill result UI if exists
+      var c = qs('#result-items-count'); if(c) c.textContent = String(state.scanned.length);
+      var p = qs('#result-items-price');
+      var total = 0;
+      state.scanned.forEach(function(it){
+        var info = PRODUCT_MASTER[it.sku] || PRODUCT_MASTER[it.sku.split('-')[0]] || null;
+        total += info && info.price ? Number(info.price)||0 : 0;
+      });
+      if(p) p.textContent = fmtYen(total);
+      var h = qs('#screen-restock-result h2'); if(h) h.textContent = '購入を確定しました';
+      var msg = qs('#result-bundle-msg'); if(msg) msg.textContent = 'ご利用ありがとうございます。';
+      activateScreen('restock-result');
+      updateHome();
+    });
+  };
+
+  // no-op in takeout
+  window.App.markCurrentAsEmpty = function(){ showToast('持ち出しモードでは使用しません'); };
+
+  // Settings stubs (can be wired to GAS later)
+  window.App.saveAccount = function(){ showToast('保存しました（デモ）'); };
+  window.App.sendTestPing = function(){ showToast('送信しました（デモ）'); };
+  window.App.resetData = function(){
+    if(confirm('購入候補をリセットしますか？')){
+      state.scanned = [];
+      renderScannedList();
+      showToast('リセットしました');
+    }
+  };
+
+  // iOS: bind touchend->onclick fallback for nav/buttons
   function bindFastTap(){
     document.addEventListener('touchend', function(ev){
       var t = ev.target;
-      // climb up to clickable element
-      for(var i=0;i<5 && t && t!==document.body;i++){
+      for(var i=0;i<6 && t && t!==document.body;i++){
         if(t.tagName==='BUTTON' || t.tagName==='A' || (t.classList && t.classList.contains('nav-item'))){
           try{ if(typeof t.onclick==='function') t.onclick.call(t, ev); }
           catch(e){}
@@ -605,12 +890,13 @@
 
   function init(){
     bindFastTap();
-    // initial screen from hash
-    var h = (location.hash||'').replace('#','');
-    if(h){ activateScreen(h); }
-    // status badge
+    configureTakeoutUI();
+    renderScannedList();
+    updateHome();
     var sb = qs('#status-badge');
     if(sb){ sb.textContent = '準備完了'; sb.className = 'px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-800'; }
+    var h = (location.hash||'').replace('#','');
+    if(h){ activateScreen(h); }
   }
 
   if(document.readyState==='loading'){
@@ -620,5 +906,6 @@
   }
 })();
 </script>
+
 </body>
 </html>
