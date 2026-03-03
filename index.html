@@ -116,7 +116,7 @@
       padding-bottom: 10px;
     }
 
-    .bottom-nav {
+        .bottom-nav {
       position: absolute;
       bottom: 0; left: 0;
       width: 100%;
@@ -127,9 +127,8 @@
       padding: 0.5rem 0;
       padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
       z-index: 50;
-    
-            pointer-events: auto;
-        }
+      pointer-events: auto;
+    }
     .nav-item {
       display: flex;
       flex-direction: column;
@@ -162,7 +161,58 @@
 
 
 #reader video { object-fit: contain !important; }
-</style>
+
+    /* takeout mode: reserve space so sticky button won't cover content */
+    #scan-grid { padding-bottom: 120px; }
+    /* takeout list style */
+    .scan-list-item { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid #e5e7eb; border-radius:12px; background:#fff; }
+    .scan-list-item .meta { min-width:0; }
+    .scan-list-item .meta .name { font-weight:800; font-size:14px; line-height:1.25; }
+    .scan-list-item .meta .sub { font-size:12px; color:#6b7280; margin-top:2px; }
+    .scan-list-item .price { font-weight:900; white-space:nowrap; }
+
+
+    /* ---- iPhone Safari: prevent camera view from covering buttons ---- */
+    #reader { width:100%; height: 320px; overflow:hidden; position:relative; }
+    #reader video, #reader canvas { width:100% !important; height:100% !important; object-fit: cover; }
+    /* html5-qrcode sometimes injects wrappers without size */
+    #reader > div { width:100% !important; height:100% !important; }
+    /* Ensure scan list/grid is not hidden by the fixed confirm bar */
+    #scan-grid { margin-bottom: 120px; }
+
+
+    /* ---- iOS SAFARI FIX (v4): prevent scanner layer from blocking ALL taps ---- */
+    #reader {
+      position: relative !important;
+      overflow: hidden !important;
+      height: 320px !important;
+      max-height: 320px !important;
+      border-radius: 0.75rem;
+      background: #000;
+    }
+    /* html5-qrcode creates nested wrappers; constrain everything inside */
+    #reader * {
+      max-width: 100% !important;
+      max-height: 100% !important;
+    }
+    #reader video,
+    #reader canvas,
+    #reader__scan_region video,
+    #reader__scan_region canvas,
+    #reader__scan_region,
+    #reader__scan_region > div {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover !important;
+      position: static !important;
+      inset: auto !important;
+      margin: 0 !important;
+      padding: 0 !important;
+    }
+    /* Critical: do not let camera layer intercept taps outside */
+    #reader, #reader * { pointer-events: none !important; }
+
+  </style>
 </head>
 <body>
 
@@ -179,14 +229,14 @@
     <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4 text-center shrink-0">
       <div class="text-sm text-blue-800 mb-1">現在の空き枠</div>
       <div class="text-4xl font-extrabold text-blue-600" id="home-empty-slots">- / 10</div>
-      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※検証用（空き枠は目安）</div>
+      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※空き枠3以上で補充可能</div>
       <div class="mt-3 text-xs text-gray-600" id="home-eta-line">-</div>
     </div>
 
     <div class="space-y-3 shrink-0">
       <button onclick="App.navigate('restock-intro')" id="btn-home-restock"
               class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-sm flex justify-between items-center px-6 disabled:bg-gray-300 disabled:text-gray-500 transition">
-        <span>🛍️ 持ち出し</span><span class="text-xl">→</span>
+        <span>📦 補充</span><span class="text-xl">→</span>
       </button>
       <button onclick="App.navigate('shipment')"
               class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition">
@@ -215,18 +265,18 @@
 
   <!-- B1: Restock intro -->
   <div id="screen-restock-intro" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4 shrink-0">持ち出し（購入確定）</h2>
+    <h2 class="text-xl font-bold mb-4 shrink-0">補充をリクエスト</h2>
     <div class="bg-white border rounded-lg p-4 mb-6 text-sm text-gray-700 space-y-3">
       <p class="font-bold">やることは2つだけ</p>
       <ol class="list-decimal pl-5 text-gray-700 space-y-1">
-        <li>箱から取った商品をスキャン</li>
-        <li>内容を確認して「購入確定」</li>
+        <li>箱に「今ある商品」を順番にスキャン</li>
+        <li>最後に「確定」</li>
       </ol>
       <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
         <p class="font-bold mb-1">ポイント</p>
         <ul class="list-disc pl-5 space-y-1">
-          <li>取った商品だけスキャンしてください（箱に残っている商品はスキャンしません）。</li>
-          <li>読み取りが違う場合は、購入確定せずに戻ってもう一度スキャンしてください。</li>
+          <li>スキャンされなかった枠は「使った」とみなされ、空き分が補充されます。</li>
+          <li>スキャンは「箱に今あるものだけ」でOKです。</li>
         </ul>
       </div>
       <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700">
@@ -267,7 +317,7 @@
     </div>
     <div class="flex justify-between items-center mb-2 shrink-0">
       <h2 class="text-lg font-bold" id="scan-title">スキャン</h2>
-      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 登録済</div>
+      <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 確認済</div>
     </div>
 
     <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 220px;">
@@ -304,14 +354,14 @@
     </div>
 
     <div class="flex gap-2 mb-3 shrink-0">
-      <button onclick="App.markCurrentAsEmpty()" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-bold text-sm">この枠は「空」</button>
+      <button id="btn-mark-empty" onclick="App.markCurrentAsEmpty()" class="flex-1 bg-gray-200 text-gray-800 py-3 rounded-lg font-bold text-sm">この枠は「空」</button>
       <button onclick="App.manualInputCode()" class="flex-1 border border-gray-300 text-gray-700 py-3 rounded-lg font-bold text-sm">コード手入力</button>
     </div>
 
     <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700 mb-3 shrink-0">
-      <div class="font-bold mb-1">持ち出しのコツ</div>
+      <div class="font-bold mb-1">スキャンのコツ</div>
       <ul class="list-disc pl-5 space-y-1">
-        <li>取った商品をスキャンしてください（枠は検証用のメモです）</li>
+        <li>枠（1〜10）をタップして、どこに入っている商品かを選んでからスキャン</li>
         <li>同じQRを2回スキャンしても「重複」として弾きます</li>
       </ul>
     </div>
@@ -321,7 +371,7 @@
     <div class="sticky-action">
       <button id="btn-scan-confirm" onclick="App.confirmScan()"
               class="w-full bg-gray-300 text-gray-500 font-bold py-4 rounded-xl cursor-not-allowed transition shrink-0" disabled>
-        購入確定
+        すべて確認して確定
       </button>
     </div>
   </div>
@@ -330,19 +380,19 @@
   <div id="screen-restock-result" class="screen p-4 justify-center">
     <div class="text-center mb-6 shrink-0">
       <div class="text-5xl mb-2">✅</div>
-      <h2 class="text-2xl font-bold text-gray-800">購入を確定しました</h2>
+      <h2 class="text-2xl font-bold text-gray-800">補充を確定しました</h2>
       <p class="text-sm text-gray-500 mt-2" id="result-bundle-msg"></p>
     </div>
 
     <div class="bg-white border rounded-xl p-5 shadow-sm mb-6 shrink-0">
-      <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">今回の購入金額（記録）</h3>
+      <h3 class="font-bold text-gray-700 border-b pb-2 mb-3">今回の便の請求確定額</h3>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between">
           <span class="text-gray-600">商品代 (<span id="result-items-count">0</span>点)</span>
           <span class="font-bold" id="result-items-price">¥0</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-gray-600">サービス料</span>
+          <span class="text-gray-600">補充手数料</span>
           <span class="font-bold" id="result-fee">¥0</span>
         </div>
         <div class="flex justify-between">
@@ -354,7 +404,7 @@
           <span class="text-2xl font-extrabold text-blue-600" id="result-total">¥0</span>
         </div>
       </div>
-      <p class="text-xs text-gray-400 mt-3 text-center">※検証用：実際の請求は発生しません（記録のみ）</p>
+      <p class="text-xs text-gray-400 mt-3 text-center">※ご登録のクレジットカードへ請求されます（検証用ダミー）</p>
     </div>
 
     <button onclick="App.navigate('home')" class="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-xl mt-4 shrink-0">ホームへ戻る</button>
@@ -372,7 +422,7 @@
     <h2 class="text-xl font-bold mb-4 shrink-0">月末締めスキャン</h2>
     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 text-sm text-red-800 space-y-3 shrink-0">
       <p class="font-bold">⚠️ 月に1度の在庫確認です</p>
-      <p>毎月末、実際に家にある商品の数を確定させるためのスキャンです。未実施の場合、翌月の利用が停止されます。</p>
+      <p>毎月末、実際に家にある商品の数を確定させるためのスキャンです。未実施の場合、翌月の補充が停止されます。</p>
     </div>
     <div class="flex-1 flex flex-col justify-end">
       <button onclick="App.startScanMode('endofmonth')" class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-md mt-4 shrink-0">締めスキャンを開始</button>
@@ -393,7 +443,7 @@
 
     <div class="bg-white border rounded-xl p-4 mb-4">
       <p class="text-sm text-gray-600 mb-3">
-        発送に必要な情報です。入力内容はこの端末に保存され、持ち出し/締めスキャン送信データにも含まれます。
+        発送に必要な情報です。入力内容はこの端末に保存され、補充/締めスキャン送信データにも含まれます。
       </p>
 
       <div class="space-y-3">
@@ -465,7 +515,7 @@
       <span class="nav-icon">🏠</span><span>ホーム</span>
     </button>
     <button class="nav-item" onclick="App.navigate('restock-intro')" id="nav-restock">
-      <span class="nav-icon">🛍️</span><span>持ち出し</span>
+      <span class="nav-icon">📦</span><span>補充</span>
     </button>
     <button class="nav-item" onclick="App.navigate('shipment')" id="nav-shipment">
       <span class="nav-icon">🚚</span><span>次回便</span>
@@ -527,6 +577,23 @@ function saveAccountToStorage(acc) {
   }));
 }
 
+
+/** ---------------------------------------
+ * Product master (OPTIONAL)
+ * SKUごとの表示名/価格/賞味期限を出したい場合はここに追記してください。
+ * 例:
+ *   "SKU003-01": { name:"びらとり和牛カレー（中辛）", price:680, exp:"2027/5/25" }
+ * ベースSKUだけ登録する場合（SKU003など）でもOKです。
+ * --------------------------------------*/
+const PRODUCT_MASTER = {
+  // "SKU003": { name:"びらとり和牛カレー（中辛）", price:680, exp:"2027/5/25" },
+};
+function getProductMeta(itemId){
+  if(!itemId) return null;
+  const key = String(itemId).toUpperCase();
+  return PRODUCT_MASTER[key] || PRODUCT_MASTER[key.split('-')[0]] || null;
+}
+
 const CONFIG = {
     GAS_WEBAPP_URL: 'https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec', // スプレッドシート連携（固定）
   BOX_CAPACITY: 10,
@@ -578,6 +645,8 @@ window.App = {
   currentScreen: 'home',
   scanMode: null,               // 'restock' | 'endofmonth'
   scanBuffer: [],
+  scannedItems: [], // takeout mode (restock) uses list instead of slots
+
   currentScanTarget: 0,
   html5Qrcode: null,
     // Native BarcodeDetector (iOS向けの安定化)
@@ -673,24 +742,24 @@ document.getElementById('scan-error').classList.add('hidden');
 
     if (this.state.data.status === 'suspended') {
       btnRestock.disabled = true;
-      condEl.textContent = '月末締め未実施のため利用停止中（まず月末締めへ）';
+      condEl.textContent = '月末締め未実施のため補充停止中（まず月末締めへ）';
       condEl.classList.add('text-red-600');
-      this.updateBadge('利用停止中', 'bg-red-500 text-white');
+      this.updateBadge('補充停止中', 'bg-red-500 text-white');
       document.getElementById('home-account-status').innerHTML = '<span class="text-red-500">停止中（要月末締め）</span>';
       document.getElementById('eom-alert').classList.remove('hidden');
     } else if (emptyCount < CONFIG.MIN_RESTOCK_SLOTS) {
       btnRestock.disabled = true;
       const need = CONFIG.MIN_RESTOCK_SLOTS - emptyCount;
-      condEl.textContent = `持ち出しは可能ですが、空き枠が少ない状態です（あと${need}枠必要）`;
+      condEl.textContent = `補充できません：空き枠が足りません（あと${need}枠必要）`;
       condEl.classList.remove('text-red-600');
-      this.updateBadge('持ち出し不可', 'bg-gray-200 text-gray-700');
+      this.updateBadge('補充不可(枠不足)', 'bg-gray-200 text-gray-700');
       document.getElementById('home-account-status').textContent = '正常';
       document.getElementById('eom-alert').classList.add('hidden');
     } else {
       btnRestock.disabled = false;
-      condEl.textContent = '持ち出し（購入確定）を記録できます';
+      condEl.textContent = '補充リクエストできます（空き枠が3以上）';
       condEl.classList.remove('text-red-600');
-      this.updateBadge('利用中', 'bg-green-500 text-white');
+      this.updateBadge('補充OK', 'bg-green-500 text-white');
       document.getElementById('home-account-status').textContent = '正常';
       document.getElementById('eom-alert').classList.add('hidden');
     }
@@ -713,14 +782,25 @@ document.getElementById('scan-error').classList.add('hidden');
   // ---------------------------------------
   startScanMode(mode) {
     this.scanMode = mode;
-    this.scanBuffer = Array(CONFIG.BOX_CAPACITY).fill(null);
-    this.currentScanTarget = 0;
+    // takeout(restock) uses a simple list (no empty slots)
+    this.scannedItems = [];
+    if (mode === 'endofmonth') {
+      this.scanBuffer = Array(CONFIG.BOX_CAPACITY).fill(null);
+      this.currentScanTarget = 0;
+    } else {
+      this.scanBuffer = []; // unused in takeout
+      this.currentScanTarget = 0;
+    }
 
-    document.getElementById('scan-title').textContent = mode === 'restock' ? '持ち出し（購入確定）' : '月末締めスキャン';
+    document.getElementById('scan-title').textContent = mode === 'restock' ? '持ち出しスキャン' : '月末締めスキャン';
     document.getElementById('btn-scan-confirm').disabled = true;
 
     this.navigate('scan');
     this.renderScanGrid();
+
+    // hide \"空\" button in takeout mode
+    const be = document.getElementById('btn-mark-empty');
+    if (be) be.style.display = (mode === 'restock') ? 'none' : '';
 
     if (this.isDebug) {
       const p = document.getElementById('scan-debug');
@@ -746,6 +826,53 @@ document.getElementById('scan-error').classList.add('hidden');
   renderScanGrid() {
     const grid = document.getElementById('scan-grid');
     grid.innerHTML = '';
+
+    // Takeout mode: show list of scanned items (no slots)
+    if (this.scanMode === 'restock') {
+      const count = this.scannedItems.length;
+      document.getElementById('scan-progress').textContent = `${count}点 登録済`;
+      const btnConfirm = document.getElementById('btn-scan-confirm');
+
+      if (count > 0) {
+        btnConfirm.disabled = false;
+        btnConfirm.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        btnConfirm.classList.add('bg-blue-600', 'text-white', 'cursor-pointer');
+      } else {
+        btnConfirm.disabled = true;
+        btnConfirm.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        btnConfirm.classList.remove('bg-blue-600', 'text-white', 'cursor-pointer');
+      }
+
+      if (count === 0) {
+        grid.innerHTML = `<div class="text-sm text-gray-500 bg-gray-50 border border-gray-200 rounded-xl p-4">
+          まだ登録がありません。箱から取った商品のQRをスキャンしてください。
+        </div>`;
+        return;
+      }
+
+      this.scannedItems.forEach((it, idx) => {
+        const meta = it.meta || null;
+        const name = (meta && meta.name) ? meta.name : (it.id || '');
+        const exp = (meta && meta.exp) ? `期限: ${meta.exp}` : '';
+        const price = (meta && typeof meta.price === 'number') ? `¥${meta.price.toLocaleString()}` : '—';
+        const sub = [it.id, exp].filter(Boolean).join(' / ');
+
+        const row = document.createElement('div');
+        row.className = 'scan-list-item';
+        row.innerHTML = `
+          <div class="meta">
+            <div class="name">${this.escapeHtml(name)}</div>
+            <div class="sub">${this.escapeHtml(sub)}</div>
+          </div>
+          <div class="price">${price}</div>
+        `;
+        grid.appendChild(row);
+      });
+
+      return;
+    }
+
+    // End-of-month mode: original 10-slot grid
     let confirmedCount = 0;
 
     this.scanBuffer.forEach((val, idx) => {
@@ -794,7 +921,8 @@ document.getElementById('scan-error').classList.add('hidden');
 
     // iPhone/Safariでhtml5-qrcodeが反応しない場合があるため、
     // BarcodeDetectorが使える環境ではネイティブ検出を優先
-    this.useNativeDetector = !!(window.BarcodeDetector && typeof window.BarcodeDetector === 'function');
+    const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent);
+    this.useNativeDetector = (!isIOS) && !!(window.BarcodeDetector && typeof window.BarcodeDetector === 'function');
 
     try {
       if (this.useNativeDetector) {
@@ -1003,6 +1131,53 @@ document.getElementById('scan-error').classList.add('hidden');
         this.updateScanDebug({ raw: s.slice(0, 240), parsed: `item=${itemId} sig=${sig} kind=${qrKind}`, error: "-" });
 
         // Duplicate by SIG
+        if (this.scanMode === 'restock') {
+            const dup = this.scannedItems.find(x => x && x.sig === sig);
+            if (dup) {
+                this.showToast(`重複です（すでに登録済み）`, "error");
+                try {
+                    await this.postToGAS({
+                        type: "scan_duplicate",
+                        mode: this.scanMode,
+                        slot: "",
+                        item_id: itemId,
+                        sig: sig,
+                        raw: s,
+                        note: `dup|${qrKind}`
+                    }, this.isDebug);
+                } catch (e) {}
+                await this.restartScannerSoon();
+                this.scanBusy = false;
+                return;
+            }
+
+            const meta = getProductMeta(itemId);
+            this.scannedItems.push({ id: itemId, sig: sig, raw: s, meta });
+
+            try {
+                await this.postToGAS({
+                    type: "scan_item",
+                    mode: this.scanMode,
+                    slot: "",
+                    item_id: itemId,
+                    sig: sig,
+                    raw: s,
+                    note: qrKind
+                }, this.isDebug);
+            } catch (e) {}
+
+            const labelName = (meta && meta.name) ? meta.name : itemId;
+            const priceTxt = (meta && typeof meta.price === 'number') ? `（¥${meta.price.toLocaleString()}）` : '';
+            this.showToast(`登録しました: ${labelName}${priceTxt}`, "success");
+
+            this.renderScanGrid();
+            await this.restartScannerSoon();
+            this.scanBusy = false;
+            return;
+        }
+
+        // endofmonth mode continues below
+        // Duplicate by SIG
         const dupIdx = this.scanBuffer.findIndex((val, idx) =>
             idx !== this.currentScanTarget && val && val !== "empty" && val.sig === sig
         );
@@ -1185,17 +1360,81 @@ document.getElementById('scan-error').classList.add('hidden');
     if (this.html5Qrcode && this.html5Qrcode.isScanning) {
       this.html5Qrcode.stop().catch(() => {});
     }
-    if (this.scanMode === 'restock') this.processRestock();
+    if (this.scanMode === 'restock') this.processTakeoutPurchase();
     else this.processEndOfMonth();
   },
 
   // ---------------------------------------
   // Business logic
   // ---------------------------------------
+  processTakeoutPurchase() {
+    const items = (this.scannedItems || []).slice();
+    if (items.length === 0) {
+      alert('まだ登録がありません。商品をスキャンしてください。');
+      return;
+    }
+
+    // Total (fallback: ITEM_AVG_PRICE if price unknown)
+    let itemsTotal = 0;
+    const lines = [];
+    items.forEach((it) => {
+      const meta = it.meta || null;
+      const name = (meta && meta.name) ? meta.name : it.id;
+      const price = (meta && typeof meta.price === 'number') ? meta.price : CONFIG.ITEM_AVG_PRICE;
+      const exp = (meta && meta.exp) ? meta.exp : '';
+      itemsTotal += price;
+      lines.push({ name, sku: it.id, price, exp });
+    });
+
+    // For takeout test: fee/shipping are 0 (record only)
+    const fee = 0;
+    const shipping = 0;
+    const total = itemsTotal + fee + shipping;
+
+    // GAS: confirm summary (record)
+    try {
+      this.postToGAS({
+        type: 'scan_confirm',
+        mode: 'restock',
+        userId: getUserId(),
+        confirmedCount: items.length,
+        emptyCount: '',
+        note: 'takeout_confirm'
+      });
+    } catch (e) {}
+
+    // Render result
+    document.getElementById('result-bundle-msg').textContent = '※検証用：実際の請求は発生しません（記録のみ）';
+
+    document.getElementById('result-items-count').textContent = items.length;
+    document.getElementById('result-items-price').textContent = `¥${itemsTotal.toLocaleString()}`;
+    document.getElementById('result-fee').textContent = `¥${fee.toLocaleString()}`;
+    document.getElementById('result-shipping-region').textContent = CONFIG.SHIPPING_REGION;
+    document.getElementById('result-shipping-cost').textContent = `¥${shipping.toLocaleString()}`;
+    document.getElementById('result-total').textContent = `¥${total.toLocaleString()}`;
+
+    const list = document.getElementById('result-items-list');
+    if (list) {
+      list.innerHTML = lines.map(l => {
+        const exp = l.exp ? `<span class="text-gray-500"> / 期限:${this.escapeHtml(l.exp)}</span>` : '';
+        return `<div class="flex justify-between text-sm">
+          <div class="min-w-0 pr-3">
+            <div class="font-bold text-gray-800 truncate">${this.escapeHtml(l.name)}</div>
+            <div class="text-xs text-gray-500">${this.escapeHtml(l.sku)}${exp}</div>
+          </div>
+          <div class="font-extrabold whitespace-nowrap">¥${Number(l.price).toLocaleString()}</div>
+        </div>`;
+      }).join('');
+    }
+
+    this.navigate('restock-result');
+  }
+
+
   processRestock() {
     const emptyCount = this.scanBuffer.filter(v => v === 'empty').length;
     if (emptyCount === 0) {
-      alert('空き枠がありません。追加は不要です。');
+      alert('空き枠がありません。補充は不要です。');
       this.navigate('home');
       return;
     }
@@ -1350,7 +1589,7 @@ document.getElementById('scan-error').classList.add('hidden');
   renderShipment() {
     const top = document.getElementById('shipment-eta-top');
     const eta = this.getEtaIfRestockNow();
-    top.textContent = eta ? eta : '在庫追加すると、ここに「いつ届くか」が表示されます。';
+    top.textContent = eta ? eta : '補充すると、ここに「いつ届くか」が表示されます。';
 
     const content = document.getElementById('shipment-content');
     const pendingShipments = this.state.data.shipments.filter(s => s.status === 'pending');
@@ -1358,7 +1597,7 @@ document.getElementById('scan-error').classList.add('hidden');
     if (pendingShipments.length === 0) {
       content.innerHTML = `
         <div class="bg-gray-50 border rounded-xl p-8 text-center text-gray-500">
-          現在、発送予定の便はありません。<br>持ち出し（購入確定）を記録すると履歴が残ります。
+          現在、発送予定の便はありません。<br>補充をリクエストすると便が作成されます。
         </div>`;
       return;
     }
@@ -1384,11 +1623,11 @@ document.getElementById('scan-error').classList.add('hidden');
           : '<span class="bg-green-100 text-green-800 text-xs px-2 py-1 rounded font-bold">同梱可能（締切前）</span>';
 
         const bundleMsg = !isDeadlinePassed
-          ? `<p class="text-sm text-green-600 mt-2 font-bold">✓ 今在庫追加するとこの便に同梱されます（追加送料/手数料なし）</p>`
-          : `<p class="text-sm text-red-500 mt-2 font-bold">※締切後：今在庫追加すると次の便になります</p>`;
+          ? `<p class="text-sm text-green-600 mt-2 font-bold">✓ 今補充するとこの便に同梱されます（追加送料/手数料なし）</p>`
+          : `<p class="text-sm text-red-500 mt-2 font-bold">※締切後：今補充すると次の便になります</p>`;
 
         const countMsg = (shipmentsThisMonthCount >= 3)
-          ? `<div class="bg-blue-50 text-blue-800 text-xs p-2 mt-2 rounded">今月3回目以降の在庫追加は、追加便を出さず「次回便にまとめて発送」します。</div>`
+          ? `<div class="bg-blue-50 text-blue-800 text-xs p-2 mt-2 rounded">今月3回目以降の補充は、追加便を出さず「次回便にまとめて発送」します。</div>`
           : '';
 
         html += `
