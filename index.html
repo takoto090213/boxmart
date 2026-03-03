@@ -996,8 +996,20 @@ document.getElementById('scan-error').classList.add('hidden');
     // iOSはplay()が必要なことがある
     try { await v.play(); } catch (e) {}
 
-    // Detector
-    this.nativeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    // Detector (guard: Safari/iOS may not support BarcodeDetector)
+    if (!('BarcodeDetector' in window)) {
+      // Fallback: do not use native detector
+      this.useNativeDetector = false;
+      this.nativeDetector = null;
+      return;
+    }
+    try {
+      this.nativeDetector = new BarcodeDetector({ formats: ['qr_code'] });
+    } catch (e) {
+      this.useNativeDetector = false;
+      this.nativeDetector = null;
+      return;
+    }
 
     // デバウンス初期化
     this.nativeLastText = '';
