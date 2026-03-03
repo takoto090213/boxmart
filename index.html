@@ -116,7 +116,7 @@
       padding-bottom: 10px;
     }
 
-        .bottom-nav {
+    .bottom-nav {
       position: absolute;
       bottom: 0; left: 0;
       width: 100%;
@@ -127,8 +127,9 @@
       padding: 0.5rem 0;
       padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
       z-index: 50;
-      pointer-events: auto;
-    }
+    
+            pointer-events: auto;
+        }
     .nav-item {
       display: flex;
       flex-direction: column;
@@ -181,38 +182,36 @@
     #scan-grid { margin-bottom: 120px; }
 
 
-    /* ---- iOS SAFARI FIX (v4): prevent scanner layer from blocking ALL taps ---- */
+    /* === iPhone tap-block fix (v4) === */
     #reader {
-      position: relative !important;
-      overflow: hidden !important;
       height: 320px !important;
       max-height: 320px !important;
-      border-radius: 0.75rem;
-      background: #000;
+      overflow: hidden !important;
+      position: relative !important;
+      z-index: 0 !important;
+      background: #000 !important;
+      border-radius: 16px;
     }
-    /* html5-qrcode creates nested wrappers; constrain everything inside */
-    #reader * {
-      max-width: 100% !important;
-      max-height: 100% !important;
+    #reader, #reader * {
+      max-height: 320px !important;
     }
-    #reader video,
-    #reader canvas,
-    #reader__scan_region video,
-    #reader__scan_region canvas,
-    #reader__scan_region,
-    #reader__scan_region > div {
+    /* html5-qrcode creates video/canvas that can spill and steal taps on iOS */
+    #reader video, #reader canvas {
+      position: absolute !important;
+      inset: 0 !important;
       width: 100% !important;
       height: 100% !important;
       object-fit: cover !important;
-      position: static !important;
-      inset: auto !important;
-      margin: 0 !important;
-      padding: 0 !important;
+      pointer-events: none !important;
+      touch-action: none !important;
     }
-    /* Critical: do not let camera layer intercept taps outside */
-    #reader, #reader * { pointer-events: none !important; }
+    /* Keep app UI above any scanner artifacts */
+    #app, .app, .app-shell, main, header, nav, footer {
+      position: relative;
+      z-index: 10;
+    }
 
-  </style>
+</style>
 </head>
 <body>
 
@@ -1773,6 +1772,47 @@ window.onload = () => { App.init(); };
 // === v24 settings save/ping (no global click hijack) ===
 (function(){
   const GAS_URL = "https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec";
+
+  // === v4 iOS: force scanner media inline & confined (prevents tap hijack) ===
+  function enforceScannerMedia(){
+    const root = document.getElementById('reader');
+    if(!root) return;
+    root.style.height = '320px';
+    root.style.maxHeight = '320px';
+    root.style.overflow = 'hidden';
+    const v = root.querySelector('video');
+    if(v){
+      v.setAttribute('playsinline','true');
+      v.setAttribute('webkit-playsinline','true');
+      v.muted = true;
+      v.playsInline = true;
+      v.style.pointerEvents = 'none';
+      v.style.objectFit = 'cover';
+      v.style.width = '100%';
+      v.style.height = '100%';
+      v.style.position = 'absolute';
+      v.style.inset = '0';
+    }
+    const c = root.querySelector('canvas');
+    if(c){
+      c.style.pointerEvents = 'none';
+      c.style.width = '100%';
+      c.style.height = '100%';
+      c.style.position = 'absolute';
+      c.style.inset = '0';
+    }
+  }
+  // keep enforcing for a short time after opening scanner
+  function burstEnforceScanner(){
+    enforceScannerMedia();
+    let n=0;
+    const t=setInterval(()=>{
+      enforceScannerMedia();
+      n+=1;
+      if(n>20) clearInterval(t);
+    }, 200);
+  }
+
 
   function ensureToast(){
     if(document.getElementById('toast')) return;
