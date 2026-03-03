@@ -209,10 +209,32 @@
     /* Ensure buttons/links always receive taps */
     button, a, .nav-item { pointer-events: auto !important; }
 
-</style>
+
+    /* v17: ensure camera fills container on iOS (remove black bars) */
+    #reader{position:relative;width:100%;height:100%;overflow:hidden;}
+    #reader video, #reader canvas{
+      position:absolute !important;
+      inset:0 !important;
+      width:100% !important;
+      height:100% !important;
+      object-fit:cover !important;
+      border-radius: 0.75rem;
+      background: transparent !important;
+    }
+    /* Single guide overlay (no double guide) */
+    .qr-guide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;}
+    .qr-guide-box{
+      width: min(72vw, 320px);
+      aspect-ratio: 1 / 1;
+      border: 3px solid rgba(255,255,255,0.92);
+      border-radius: 18px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.25);
+    }
+
+  </style>
 </head>
 <body>
-  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v16</div>
+  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v17</div>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
     BUILD TAKEOUT v11
   </div>
@@ -328,8 +350,9 @@
       <div class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm" id="scan-progress">0/10 確認済</div>
     </div>
 
-    <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 220px;">
+    <div class="bg-black rounded-xl mb-3 relative shrink-0" style="height: 260px;">
       <div id="reader"></div>
+      <div class="qr-guide"><div class="qr-guide-box"></div></div>
 <div id="scan-overlay" class="absolute inset-0 flex flex-col gap-3 items-center justify-center text-white bg-black bg-opacity-60 hidden z-10 p-4">
         <div class="text-center text-sm leading-relaxed">
           <div class="font-bold mb-1">カメラ準備中…</div>
