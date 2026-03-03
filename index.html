@@ -180,6 +180,8 @@
     #reader > div { width:100% !important; height:100% !important; }
     /* Ensure scan list/grid is not hidden by the fixed confirm bar */
     #scan-grid { margin-bottom: 120px; }
+    /* takeout: hide "empty" button */
+    #btn-mark-empty { display:none !important; }
 
 
     /* === iPhone tap-block fix (v4) === */
@@ -206,16 +208,21 @@
       touch-action: none !important;
     }
     /* Keep app UI above any scanner artifacts */
-    #app, .app, .app-shell, main, header, nav, footer {
+    #app, .app, .app-shell, main, header, nav, footer, .screen, .bottom-nav {
       position: relative;
       z-index: 10;
     }
+
+    /* v8: Global tap-steal prevention (iOS) */
+    video, canvas { pointer-events: none !important; }
+    /* Ensure buttons/links always receive taps */
+    button, a, .nav-item { pointer-events: auto !important; }
 
 </style>
 </head>
 <body>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
-    BUILD TAKEOUT v7
+    BUILD TAKEOUT v8
   </div>
 
 
@@ -272,14 +279,14 @@
     <div class="bg-white border rounded-lg p-4 mb-6 text-sm text-gray-700 space-y-3">
       <p class="font-bold">やることは2つだけ</p>
       <ol class="list-decimal pl-5 text-gray-700 space-y-1">
-        <li>箱に「今ある商品」を順番にスキャン</li>
-        <li>最後に「確定」</li>
+        <li><strong>箱から取った商品</strong>のQRをスキャン</li>
+        <li>内容を確認して<strong>「購入確定」</strong></li>
       </ol>
       <div class="bg-blue-50 border border-blue-100 rounded-lg p-3 text-xs text-blue-800">
         <p class="font-bold mb-1">ポイント</p>
         <ul class="list-disc pl-5 space-y-1">
-          <li>スキャンされなかった枠は「使った」とみなされ、空き分が補充されます。</li>
-          <li>スキャンは「箱に今あるものだけ」でOKです。</li>
+          <li><strong>取った商品だけ</strong>スキャンしてください（箱に残っている商品はスキャンしません）</li>
+          <li>間違えた場合は「購入確定」を押さずに戻って、もう一度スキャンしてください</li>
         </ul>
       </div>
       <div class="bg-gray-50 border rounded-lg p-3 text-xs text-gray-700">
