@@ -82,22 +82,24 @@
     #reader {
       width: 100%;
       border-radius: 0.75rem;
-      overflow: visible !important;
+      overflow: hidden !important;   /* ★はみ出し防止 */
       background: #000;
-      height: 220px;           /* ★固定高さ */
-      max-height: 220px;
-      position: relative;      /* ★子要素の基準 */
+      height: clamp(260px, 42vh, 360px); /* ★iPhoneでも見やすい高さ */
+      position: relative;
       touch-action: none;
     }
+#reader > div { position: absolute !important; inset: 0 !important; }
     #reader video,
     #reader canvas {
+      position: absolute !important;
+      inset: 0 !important;
       width: 100% !important;
-      height: 220px !important;
-      max-height: 220px !important;
-      object-fit: cover;
-      position: static !important;  /* ★fixed/absolute を潰す */
+      height: 100% !important;
+      object-fit: cover !important;
+      border-radius: 0.75rem;
+      background: transparent !important;
     }
-    /* html5-qrcode の余計なUIを非表示（下の要素のタップ事故を減らす） */
+/* html5-qrcode の余計なUIを非表示（下の要素のタップ事故を減らす） */
     #reader__dashboard_section,
     #reader__dashboard_section_csr {
       display: none !important;
@@ -224,17 +226,17 @@
     /* Single guide overlay (no double guide) */
     .qr-guide{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:5;}
     .qr-guide-box{
-      width: min(72vw, 320px);
-      aspect-ratio: 1 / 1;
-      border: 3px solid rgba(255,255,255,0.92);
+      width: min(68vw, 260px);
+      height: min(68vw, 260px);
+      border: 4px solid rgba(255,255,255,.95);
       border-radius: 18px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.25);
+      box-shadow: 0 0 0 9999px rgba(0,0,0,.25);
     }
 
   </style>
 </head>
 <body>
-  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v17</div>
+  <div id="build-badge" style="position:fixed;top:8px;left:8px;z-index:99999;background:#111827;color:#fff;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:800;opacity:.9;">BUILD TAKEOUT v18</div>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
     BUILD TAKEOUT v11
   </div>
@@ -767,7 +769,7 @@
 
     state.isScanning = true;
 
-    var config = { fps: 12, qrbox: function(vw, vh){ var m=Math.min(vw, vh); var s=Math.floor(m*0.75); s=Math.max(240, Math.min(s, 340)); return { width: s, height: s }; }, disableFlip: true };
+    var config = { fps: 15, qrbox: function(vw, vh){ var m=Math.min(vw, vh); var s=Math.floor(m*0.85); s=Math.max(260, Math.min(s, 380)); return { width: s, height: s }; }, disableFlip: true };
     var camera = { facingMode: "environment" };
 
     state.html5.start(camera, config, function(decodedText){
