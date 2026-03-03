@@ -214,6 +214,10 @@
 </style>
 </head>
 <body>
+  <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
+    BUILD TAKEOUT v7
+  </div>
+
 
 <div class="app-container">
   <header class="bg-white px-4 py-3 border-b flex justify-between items-center z-40 shrink-0">
@@ -226,16 +230,16 @@
     <h2 class="text-lg font-bold mb-4 shrink-0">現在の状況</h2>
 
     <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4 text-center shrink-0">
-      <div class="text-sm text-blue-800 mb-1">現在の空き枠</div>
+      <div class="text-sm text-blue-800 mb-1">本日の購入確定</div>
       <div class="text-4xl font-extrabold text-blue-600" id="home-empty-slots">- / 10</div>
-      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※空き枠3以上で補充可能</div>
+      <div class="mt-2 text-sm text-gray-600" id="home-restock-condition">※取った商品をスキャンしてください</div>
       <div class="mt-3 text-xs text-gray-600" id="home-eta-line">-</div>
     </div>
 
     <div class="space-y-3 shrink-0">
       <button onclick="App.navigate('restock-intro')" id="btn-home-restock"
               class="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-sm flex justify-between items-center px-6 disabled:bg-gray-300 disabled:text-gray-500 transition">
-        <span>📦 補充</span><span class="text-xl">→</span>
+        <span>📦 持ち出し</span><span class="text-xl">→</span>
       </button>
       <button onclick="App.navigate('shipment')"
               class="w-full bg-white border-2 border-gray-200 text-gray-800 font-bold py-4 rounded-xl flex justify-between items-center px-6 active:bg-gray-50 transition">
@@ -264,7 +268,7 @@
 
   <!-- B1: Restock intro -->
   <div id="screen-restock-intro" class="screen p-4">
-    <h2 class="text-xl font-bold mb-4 shrink-0">補充をリクエスト</h2>
+    <h2 class="text-xl font-bold mb-4 shrink-0">持ち出し（購入確定）</h2>
     <div class="bg-white border rounded-lg p-4 mb-6 text-sm text-gray-700 space-y-3">
       <p class="font-bold">やることは2つだけ</p>
       <ol class="list-decimal pl-5 text-gray-700 space-y-1">
@@ -514,7 +518,7 @@
       <span class="nav-icon">🏠</span><span>ホーム</span>
     </button>
     <button class="nav-item" onclick="App.navigate('restock-intro')" id="nav-restock">
-      <span class="nav-icon">📦</span><span>補充</span>
+      <span class="nav-icon">📦</span><span>持ち出し</span>
     </button>
     <button class="nav-item" onclick="App.navigate('shipment')" id="nav-shipment">
       <span class="nav-icon">🚚</span><span>次回便</span>
@@ -749,7 +753,7 @@ document.getElementById('scan-error').classList.add('hidden');
     } else if (emptyCount < CONFIG.MIN_RESTOCK_SLOTS) {
       btnRestock.disabled = true;
       const need = CONFIG.MIN_RESTOCK_SLOTS - emptyCount;
-      condEl.textContent = `補充できません：空き枠が足りません（あと${need}枠必要）`;
+      condEl.textContent = `スキャンして購入確定してください（あと${need}枠必要）`;
       condEl.classList.remove('text-red-600');
       this.updateBadge('補充不可(枠不足)', 'bg-gray-200 text-gray-700');
       document.getElementById('home-account-status').textContent = '正常';
@@ -1608,7 +1612,7 @@ document.getElementById('scan-error').classList.add('hidden');
     if (pendingShipments.length === 0) {
       content.innerHTML = `
         <div class="bg-gray-50 border rounded-xl p-8 text-center text-gray-500">
-          現在、発送予定の便はありません。<br>補充をリクエストすると便が作成されます。
+          現在、発送予定の便はありません。<br>持ち出し（購入確定）すると便が作成されます。
         </div>`;
       return;
     }
