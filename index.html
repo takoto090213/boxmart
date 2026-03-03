@@ -222,7 +222,7 @@
 </head>
 <body>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
-    BUILD TAKEOUT v8
+    BUILD TAKEOUT v10
   </div>
 
 
@@ -1763,6 +1763,34 @@ async sendTestPing() {
     }
   }
 };
+
+// v10: iOS "fast tap" fallback — some WebViews/Safari setups do not emit click on buttons reliably.
+(function(){
+  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent);
+  if(!isIOS) return;
+  let lastTouchTs = 0;
+  document.addEventListener('touchend', function(e){
+    // avoid double-fire if a real click arrives
+    const now = Date.now();
+    if (now - lastTouchTs < 350) return;
+    lastTouchTs = now;
+
+    const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
+    if(!t) return;
+
+    const el = document.elementFromPoint(t.clientX, t.clientY);
+    if(!el) return;
+
+    const btn = el.closest && el.closest('button, a, .nav-item');
+    if(!btn) return;
+
+    // If it's disabled, do nothing
+    if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
+
+    // Trigger the same behavior as a click
+    try { btn.click(); } catch(_) {}
+  }, {passive:true});
+})();
 
 window.onload = () => { App.init(); };
 
