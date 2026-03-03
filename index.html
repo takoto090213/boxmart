@@ -222,7 +222,13 @@
 </head>
 <body>
   <div id="buildBadge" style="position:fixed;left:10px;top:10px;z-index:9999;background:#111827;color:#fff;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;opacity:.9;pointer-events:none;">
-    BUILD TAKEOUT v10
+    BUILD TAKEOUT v11
+  </div>
+
+
+  <div id="js-error-banner" style="position:fixed;top:48px;left:12px;right:12px;z-index:99999;background:#111827;color:#fff;padding:10px 12px;border-radius:12px;font-size:12px;display:none;">
+    <div style="font-weight:800;margin-bottom:4px;">JSエラー</div>
+    <div id="js-error-text" style="white-space:pre-wrap;word-break:break-word;"></div>
   </div>
 
 
@@ -707,8 +713,8 @@ window.App = {
   navigate(screenId, pushState = true) {
     // Stop any scanner when leaving scan
     this.stopAnyScanner && this.stopAnyScanner();
-document.getElementById('scan-error').classList.add('hidden');
-    document.getElementById('scan-overlay').classList.add('hidden');
+const _se=document.getElementById('scan-error'); if(_se) _se.classList.add('hidden');
+    const _so=document.getElementById('scan-overlay'); if(_so) _so.classList.add('hidden');
       this.updateScanDebug({ error: "-" });
 
     document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
@@ -923,7 +929,7 @@ document.getElementById('scan-error').classList.add('hidden');
   },
 
   async initScanner() {
-    document.getElementById('scan-error').classList.add('hidden');
+    const _se=document.getElementById('scan-error'); if(_se) _se.classList.add('hidden');
     document.getElementById('scan-overlay').classList.remove('hidden');
 
     // まず既存スキャナを止める（安全）
@@ -940,7 +946,7 @@ document.getElementById('scan-error').classList.add('hidden');
       } else {
         await this.startHtml5QrcodeScanner();
       }
-      document.getElementById('scan-overlay').classList.add('hidden');
+      const _so=document.getElementById('scan-overlay'); if(_so) _so.classList.add('hidden');
     } catch (err) {
       console.error(err);
       this.showScanError(err);
@@ -1075,7 +1081,7 @@ document.getElementById('scan-error').classList.add('hidden');
     const msg = String(err && err.message ? err.message : err);
     this.updateScanDebug({ error: msg });
 
-    document.getElementById('scan-overlay').classList.add('hidden');
+    const _so=document.getElementById('scan-overlay'); if(_so) _so.classList.add('hidden');
     const el = document.getElementById('scan-error');
     if (el) el.classList.remove('hidden');
 
@@ -1764,32 +1770,43 @@ async sendTestPing() {
   }
 };
 
-// v10: iOS "fast tap" fallback — some WebViews/Safari setups do not emit click on buttons reliably.
+
+// --- v11: show JS errors on screen (iPhone Safari friendly) ---
 (function(){
-  const isIOS = /iP(hone|od|ad)/.test(navigator.userAgent);
-  if(!isIOS) return;
-  let lastTouchTs = 0;
-  document.addEventListener('touchend', function(e){
-    // avoid double-fire if a real click arrives
-    const now = Date.now();
-    if (now - lastTouchTs < 350) return;
-    lastTouchTs = now;
-
-    const t = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0] : null;
-    if(!t) return;
-
-    const el = document.elementFromPoint(t.clientX, t.clientY);
-    if(!el) return;
-
-    const btn = el.closest && el.closest('button, a, .nav-item');
-    if(!btn) return;
-
-    // If it's disabled, do nothing
-    if (btn.disabled || btn.getAttribute('aria-disabled') === 'true') return;
-
-    // Trigger the same behavior as a click
-    try { btn.click(); } catch(_) {}
-  }, {passive:true});
+  function showErr(msg){
+    try{
+      const b=document.getElementById('js-error-banner');
+      const t=document.getElementById('js-error-text');
+      if(!b||!t) return;
+      t.textContent=String(msg||'');
+      b.style.display='block';
+    }catch(_){}
+  }
+  window.addEventListener('error', (e)=>{
+    const msg = (e && (e.message||e.error)) ? (e.message||String(e.error)) : 'Unknown error';
+    showErr(msg);
+  });
+  window.addEventListener('unhandledrejection', (e)=>{
+    showErr('Promise rejection: ' + (e && e.reason ? String(e.reason) : 'unknown'));
+  });
+  // safety: bind nav and primary buttons in addition to inline onclick
+  function bind(){
+    const binds = [
+      ['nav-home','home'],
+      ['nav-restock','restock-intro'],
+      ['nav-shipment','shipment'],
+      ['nav-settings','settings'],
+      ['btn-home-restock','restock-intro']
+    ];
+    binds.forEach(([id,screen])=>{
+      const el=document.getElementById(id);
+      if(!el) return;
+      el.addEventListener('click', ()=>{ try{ window.App && window.App.navigate && window.App.navigate(screen); }catch(err){ showErr(err); }}, false);
+      el.addEventListener('touchend', ()=>{ try{ window.App && window.App.navigate && window.App.navigate(screen); }catch(err){ showErr(err); }}, false);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', bind);
+  window.__showErr = showErr;
 })();
 
 window.onload = () => { App.init(); };
