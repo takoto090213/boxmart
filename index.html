@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <title>BOXMART</title>
   <style>
     :root{--blue:#2563eb;--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--radius:16px;--shadow:0 8px 24px rgba(17,24,39,.08);}
@@ -28,54 +28,77 @@
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));z-index:80;background:#111827;color:#fff;padding:10px 12px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;max-width:min(520px, calc(100vw - 24px));width:calc(100vw - 24px)}
     .toast.show{opacity:.92;transform:translateX(-50%) translateY(-6px)}
     nav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);border-top:1px solid var(--border);backdrop-filter:blur(10px);padding:10px 10px calc(10px + env(safe-area-inset-bottom));z-index:70}
-    .tabs{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+    .tabs{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
     .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 6px;border-radius:14px;border:1px solid transparent;color:var(--muted);font-size:12px;user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
     .tab.active{color:var(--blue);border-color:#dbeafe;background:#eff6ff}
     .icon{font-size:18px;line-height:1}
 
-    /* Camera area */
-    .scannerWrap{border:1px solid var(--border);border-radius:18px;overflow:hidden;background:#000;position:relative;height:min(56vh, 420px)}
+    .scannerWrap{
+      border:1px solid var(--border);
+      border-radius:18px;
+      overflow:hidden;
+      background:#000;
+      position:relative;
+      height:min(56vh, 420px);
+    }
     #nativeVideo{
-      position:absolute; inset:0; width:100%; height:100%;
-      object-fit:cover; background:#000;
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit:cover;
+      background:#000;
       pointer-events:none;
+      transform: translateZ(0);
     }
     .guide{position:absolute;inset:12%;border:3px solid rgba(255,255,255,.92);border-radius:18px;pointer-events:none}
     .guide::after{content:"";position:absolute;inset:12px;border:2px dashed rgba(255,255,255,.35);border-radius:14px}
-
-    .debug{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:12px;white-space:pre-wrap;word-break:break-word;background:#0b1220;color:#e5e7eb;border-radius:14px;padding:12px;border:1px solid rgba(255,255,255,.08)}
     canvas{display:none}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .itemRow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--border);border-radius:14px;background:#fff}
+    .sku{font-weight:900;letter-spacing:.3px}
+    .mini{font-size:12px;color:var(--muted)}
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v25 CAM-DIAG</div>
+  <div class="build">BUILD TAKEOUT v26 iOS-NATIVE-CAM</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
     <header>
       <div class="brand">BOXMART</div>
-      <div class="pill warn" id="statusPill">診断モード</div>
+      <div class="pill warn" id="statusPill">準備中…</div>
     </header>
 
     <main>
       <section id="screen-home">
-        <div class="h1">カメラ診断</div>
+        <div class="h1">現在の状況</div>
         <div class="card">
-          <div style="font-weight:800;margin-bottom:6px">目的</div>
-          <div class="muted">「真っ黒（映像が出ない）」原因を切り分けるため、<b>ネイティブgetUserMedia</b>で映像状態（videoサイズ/フレーム）を表示します。</div>
+          <div class="row">
+            <div>
+              <div style="font-weight:900">本日の購入候補</div>
+              <div class="muted">QRをスキャンして「購入確定」してください</div>
+            </div>
+            <div class="pill" id="countPill">0点</div>
+          </div>
           <div style="height:10px"></div>
-          <button class="btn" id="goTakeout"><span class="icon">📷</span>診断を開始<span style="margin-left:auto">→</span></button>
+          <button class="btn" id="goTakeout"><span class="icon">🛍️</span>持ち出し（購入確定）<span style="margin-left:auto">→</span></button>
+        </div>
+        <div class="card">
+          <div class="muted">
+            <b>今回の修正点</b><br/>
+            v25診断で「映像は取れている（480x640, 黒率0）」が確認できたので、<u>表示の黒帯/黒画面はレイヤー構造の問題</u>と確定。<br/>
+            v26はプレビューを <u>ネイティブgetUserMediaのvideo表示</u>に統一し、黒帯が出ない構造にしています。
+          </div>
         </div>
       </section>
 
       <section id="screen-takeout" style="display:none">
         <div class="row" style="margin:8px 2px 10px;">
-          <div class="h1" style="margin:0">カメラ診断</div>
-          <div class="pill warn" id="readyPill">未起動</div>
+          <div class="h1" style="margin:0">持ち出しスキャン</div>
+          <div class="pill" id="readyPill">未起動</div>
         </div>
 
         <div class="row" style="margin:0 2px 10px">
-          <div class="muted" id="camInfo">「カメラ起動」を押してください（ユーザー操作が必要）</div>
+          <div class="muted" id="camInfo">「カメラ起動」を押してください</div>
           <div class="pill" id="modePill">native</div>
         </div>
 
@@ -84,31 +107,51 @@
           <div class="guide"></div>
         </div>
 
-        <canvas id="probe" width="160" height="120"></canvas>
+        <canvas id="probe" width="240" height="180"></canvas>
 
         <div class="card">
           <div class="row">
             <button class="btn small" id="startBtn">カメラ起動</button>
-            <button class="btn secondary small" id="stopBtn">停止</button>
+            <button class="btn secondary small" id="rebootBtn">カメラ再起動</button>
           </div>
           <div style="height:10px"></div>
           <div class="row">
-            <button class="btn secondary small" id="swapBtn">方式切替（A/B）</button>
-            <button class="btn secondary small" id="backHomeBtn">ホームへ戻る</button>
+            <button class="btn secondary small" id="manualBtn">コード手入力</button>
+            <button class="btn secondary small" id="clearBtn">候補クリア</button>
           </div>
         </div>
 
         <div class="card">
-          <div style="font-weight:800;margin-bottom:8px">デバッグ情報</div>
-          <div class="debug" id="debug"></div>
+          <div class="row" style="margin-bottom:6px">
+            <div style="font-weight:900">今回の購入候補</div>
+            <div class="mini">合計：<span id="sumText">¥0</span></div>
+          </div>
+          <div class="list" id="list"></div>
+          <div style="height:10px"></div>
+          <button class="btn" id="confirmBtn" disabled>購入確定（0点）</button>
+          <div class="muted" style="margin-top:10px">
+            ・同じQRを2回読むと「重複」で弾きます<br/>
+            ・QRの中身は <code>BOXMART:ITEM=SKUxxx-yy:SIG=....</code> を想定
+          </div>
         </div>
+      </section>
 
+      <section id="screen-next" style="display:none">
+        <div class="h1">次回便</div>
+        <div class="card"><div class="muted">（後で実装）</div></div>
+      </section>
+
+      <section id="screen-settings" style="display:none">
+        <div class="h1">設定</div>
         <div class="card">
-          <div style="font-weight:800;margin-bottom:6px">この画面が黒い場合の“ほぼ確”原因</div>
-          <div class="muted">1) 他アプリがカメラ使用中（Instagram/LINE/カメラ等） → 全て閉じる</div>
-          <div class="muted">2) iOS側のカメラストリーム固着 → iPhone再起動で解消することが多い</div>
-          <div class="muted">3) Safariのカメラ許可が実は「拒否」 → 設定→Safari→カメラ</div>
-          <div class="muted">4) 企業端末/スクリーンタイム制限でカメラWeb利用が禁止</div>
+          <div class="row" style="margin-bottom:10px">
+            <div>
+              <div style="font-weight:900">デバッグ</div>
+              <div class="muted">状態確認用</div>
+            </div>
+            <button class="btn secondary small" id="dbgBtn">状態表示</button>
+          </div>
+          <div class="muted" id="dbgText">-</div>
         </div>
       </section>
     </main>
@@ -117,181 +160,229 @@
   <nav>
     <div class="tabs">
       <div class="tab active" data-tab="home"><div class="icon">🏠</div><div>ホーム</div></div>
-      <div class="tab" data-tab="takeout"><div class="icon">📷</div><div>診断</div></div>
-      <div class="tab" data-tab="dummy"><div class="icon">•</div><div> </div></div>
+      <div class="tab" data-tab="takeout"><div class="icon">🛍️</div><div>持ち出し</div></div>
+      <div class="tab" data-tab="next"><div class="icon">🚚</div><div>次回便</div></div>
+      <div class="tab" data-tab="settings"><div class="icon">⚙️</div><div>設定</div></div>
     </div>
   </nav>
 
   <script>
-    let stream = null;
-    let pollTimer = null;
-    let attemptMode = 0; // 0:A, 1:B
     const $ = (id)=>document.getElementById(id);
     const toastEl = $("toast");
-
     function toast(msg){
       toastEl.textContent = msg;
       toastEl.classList.add("show");
       clearTimeout(toastEl._t);
       toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1800);
     }
-
-    function setDebug(obj){
-      $("debug").textContent = typeof obj === "string" ? obj : JSON.stringify(obj, null, 2);
-    }
-
     function showScreen(name){
-      $("screen-home").style.display = (name==="home") ? "" : "none";
-      $("screen-takeout").style.display = (name==="takeout") ? "" : "none";
-      document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab === name));
-      if(name==="home") stopCamera();
+      ["home","takeout","next","settings"].forEach(s=>{
+        $("screen-"+s).style.display = (s===name) ? "" : "none";
+      });
+      document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
+      if(name!=="takeout") stopCamera();
     }
+    document.querySelectorAll(".tab").forEach(t=>{
+      t.addEventListener("click", ()=>showScreen(t.dataset.tab));
+    });
+    $("goTakeout").onclick = ()=>showScreen("takeout");
+
+    function parseBoxmart(raw){
+      if(!raw) return null;
+      const s = String(raw).trim();
+      const mItem = s.match(/ITEM=([^:\s]+)/i);
+      const mSig  = s.match(/SIG=([^\s|]+)/i);
+      const item_id = mItem ? mItem[1] : "";
+      const sig = mSig ? mSig[1] : "";
+      if(!item_id) return null;
+      return { raw:s, item_id, sig };
+    }
+
+    const picked = [];
+    const pickedSet = new Set();
+
+    function renderList(){
+      const list = $("list");
+      list.innerHTML = "";
+      if(picked.length===0){
+        list.innerHTML = '<div class="muted">まだスキャンされていません。</div>';
+      }else{
+        picked.forEach((it, idx)=>{
+          const div = document.createElement("div");
+          div.className = "itemRow";
+          div.innerHTML = `
+            <div>
+              <div class="sku">${it.item_id}</div>
+              <div class="mini">sig: ${it.sig || "-"}</div>
+            </div>
+            <button class="btn secondary small" data-del="${idx}">削除</button>
+          `;
+          list.appendChild(div);
+        });
+      }
+      list.querySelectorAll("[data-del]").forEach(btn=>{
+        btn.onclick = ()=>{
+          const i = Number(btn.getAttribute("data-del"));
+          const it = picked[i];
+          if(it){ pickedSet.delete(it.item_id); picked.splice(i,1); }
+          updateCounts();
+          renderList();
+        };
+      });
+      $("confirmBtn").disabled = (picked.length===0);
+      $("confirmBtn").textContent = `購入確定（${picked.length}点）`;
+    }
+
+    function updateCounts(){
+      $("countPill").textContent = `${picked.length}点`;
+      $("sumText").textContent = "¥0";
+    }
+
+    function addCandidate(p){
+      if(pickedSet.has(p.item_id)){
+        toast("重複: " + p.item_id);
+        return;
+      }
+      pickedSet.add(p.item_id);
+      picked.push(p);
+      toast("追加: " + p.item_id);
+      updateCounts();
+      renderList();
+    }
+
+    let stream = null;
+    let detector = null;
+    let loopTimer = null;
+    let lastRaw = "";
 
     async function stopCamera(){
-      try{ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; } }catch(e){}
+      try{ if(loopTimer){ clearTimeout(loopTimer); loopTimer=null; } }catch(e){}
       try{
         const v = $("nativeVideo");
         v.pause();
         v.srcObject = null;
       }catch(e){}
-      try{
-        if(stream){ stream.getTracks().forEach(t=>t.stop()); }
-      }catch(e){}
+      try{ if(stream){ stream.getTracks().forEach(t=>t.stop()); } }catch(e){}
       stream = null;
+      detector = null;
+      lastRaw = "";
       $("readyPill").textContent = "停止";
       $("readyPill").className = "pill warn";
       $("camInfo").textContent = "停止しました";
+      $("statusPill").textContent = "停止";
+      $("statusPill").className = "pill warn";
     }
 
     async function startCamera(){
       await stopCamera();
-
-      const v = $("nativeVideo");
       $("readyPill").textContent = "起動中…";
       $("readyPill").className = "pill warn";
-      $("camInfo").textContent = "getUserMedia を呼び出しています…";
+      $("camInfo").textContent = "カメラを起動しています…";
+      $("statusPill").textContent = "起動中…";
+      $("statusPill").className = "pill warn";
 
-      const base = { audio:false };
-      const A = { ...base, video:{ facingMode:{ ideal:"environment" } } };
-      const B = { ...base, video:{ facingMode:"environment" } };
-
-      // mode A/B: iOSで挙動が違う端末があるため、切替できるように
-      const constraints = (attemptMode===0) ? A : B;
-      $("modePill").textContent = (attemptMode===0) ? "native A" : "native B";
+      const v = $("nativeVideo");
+      const constraintsA = { audio:false, video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1280 }, height:{ ideal:720 } } };
+      const constraintsB = { audio:false, video:{ facingMode:{ ideal:"environment" } } };
 
       try{
-        if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-          throw new Error("navigator.mediaDevices.getUserMedia が利用できません（HTTPS/ブラウザ制限）");
-        }
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        v.setAttribute("playsinline","true");
-        v.setAttribute("webkit-playsinline","true");
-        v.muted = true;
-        v.srcObject = stream;
+        stream = await navigator.mediaDevices.getUserMedia(constraintsA);
+      }catch(e){
+        stream = await navigator.mediaDevices.getUserMedia(constraintsB);
+      }
 
-        // iOSは user gesture でも play() が失敗することがあるので catch
-        try{ await v.play(); }catch(e){}
+      v.setAttribute("playsinline","true");
+      v.setAttribute("webkit-playsinline","true");
+      v.muted = true;
+      v.srcObject = stream;
+      try{ await v.play(); }catch(e){}
 
-        $("readyPill").textContent = "起動";
-        $("readyPill").className = "pill ok";
-        $("camInfo").textContent = "映像を取得中（数秒待ってください）";
+      if("BarcodeDetector" in window){
+        try{ detector = new BarcodeDetector({ formats:["qr_code"] }); }
+        catch(e){ try{ detector = new BarcodeDetector(); }catch(e2){ detector=null; } }
+      }else{
+        detector = null;
+      }
 
-        // Poll: video size + black frame check
-        const canvas = $("probe");
-        const ctx = canvas.getContext("2d", { willReadFrequently:true });
+      if(!detector){
+        $("readyPill").textContent = "映像のみ";
+        $("readyPill").className = "pill warn";
+        $("camInfo").textContent = "このブラウザはQR検出に非対応です（手入力してください）";
+        $("statusPill").textContent = "映像のみ";
+        $("statusPill").className = "pill warn";
+        return;
+      }
 
-        pollTimer = setInterval(()=>{
+      $("readyPill").textContent = "準備完了";
+      $("readyPill").className = "pill ok";
+      $("camInfo").textContent = "QRを枠内に入れてください";
+      $("statusPill").textContent = "準備完了";
+      $("statusPill").className = "pill ok";
+
+      const loop = async ()=>{
+        if(!stream || !detector) return;
+        try{
           const vw = v.videoWidth || 0;
           const vh = v.videoHeight || 0;
-          const rs = v.readyState;
-
-          let blackScore = null;
-          if(vw>0 && vh>0){
-            // sample frame
-            try{
-              ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-              const img = ctx.getImageData(0,0,canvas.width,canvas.height).data;
-              // count near-black pixels
-              let dark = 0;
-              for(let i=0;i<img.length;i+=16){
-                const r=img[i], g=img[i+1], b=img[i+2];
-                if(r<12 && g<12 && b<12) dark++;
-              }
-              blackScore = dark / (img.length/16);
-            }catch(e){
-              blackScore = "capture_error";
-            }
-          }
-
-          const tracks = stream ? stream.getVideoTracks() : [];
-          const t0 = tracks[0];
-          const settings = t0 && t0.getSettings ? t0.getSettings() : {};
-          const st = {
-            url: location.href,
-            secure: location.protocol,
-            ua: navigator.userAgent,
-            mode: (attemptMode===0) ? "A (ideal env)" : "B (env string)",
-            readyState: rs,
-            video: { videoWidth: vw, videoHeight: vh },
-            frameBlackRatio: blackScore,
-            track: t0 ? {
-              label: t0.label || "",
-              muted: t0.muted,
-              enabled: t0.enabled,
-              readyState: t0.readyState,
-              settings
-            } : null
-          };
-
-          setDebug(st);
-
           if(vw===0 || vh===0){
-            $("camInfo").textContent = "映像サイズが 0x0 のままです（黒画面の典型）→ 方式切替 or iPhone再起動を推奨";
+            $("camInfo").textContent = "映像が 0x0 のままです → 再起動を押してください";
             $("readyPill").textContent = "映像未表示";
             $("readyPill").className = "pill warn";
-          }else{
-            // if almost all black
-            if(typeof blackScore === "number" && blackScore > 0.95){
-              $("camInfo").textContent = "フレームがほぼ黒です（他アプリ占有/権限/OS固着の可能性）→ 全アプリ終了→再起動が有効";
-              $("readyPill").textContent = "黒フレーム";
-              $("readyPill").className = "pill warn";
-            }else{
-              $("camInfo").textContent = "映像が取得できています（黒でなければOK）";
-              $("readyPill").textContent = "正常";
-              $("readyPill").className = "pill ok";
+            loopTimer = setTimeout(loop, 300);
+            return;
+          }
+          const codes = await detector.detect(v);
+          if(codes && codes.length){
+            const raw = codes[0].rawValue || "";
+            if(raw && raw !== lastRaw){
+              lastRaw = raw;
+              const p = parseBoxmart(raw);
+              if(p) addCandidate(p);
+              else toast("形式不明（BOXMART以外？）");
             }
           }
-        }, 500);
-
-      }catch(e){
-        $("readyPill").textContent = "失敗";
-        $("readyPill").className = "pill bad";
-        $("camInfo").textContent = "getUserMedia が失敗しました";
-        setDebug({ error: String(e && (e.name||e.message||e)), detail: String(e), constraints });
-        toast("カメラ起動失敗: " + (e && (e.name||e.message||e)));
-      }
+        }catch(e){
+          // ignore
+        }
+        loopTimer = setTimeout(loop, 160);
+      };
+      loop();
     }
 
-    // UI wiring
-    document.querySelectorAll(".tab").forEach(t=>{
-      t.addEventListener("click", ()=>{
-        if(t.dataset.tab==="dummy") return;
-        showScreen(t.dataset.tab);
-      });
-    });
-    $("goTakeout").onclick = ()=>showScreen("takeout");
-    $("backHomeBtn").onclick = ()=>showScreen("home");
     $("startBtn").onclick = ()=>startCamera();
-    $("stopBtn").onclick = ()=>stopCamera();
-    $("swapBtn").onclick = async ()=>{
-      attemptMode = (attemptMode+1)%2;
-      toast("方式を切替しました");
-      await startCamera();
+    $("rebootBtn").onclick = ()=>startCamera();
+    $("clearBtn").onclick = ()=>{
+      picked.length = 0;
+      pickedSet.clear();
+      updateCounts();
+      renderList();
+      toast("クリアしました");
+    };
+    $("manualBtn").onclick = ()=>{
+      const raw = prompt("QRの文字列（BOXMART:ITEM=...:SIG=...）を貼り付けてください");
+      if(!raw) return;
+      const p = parseBoxmart(raw);
+      if(!p){ toast("形式が違います"); return; }
+      addCandidate(p);
+    };
+    $("confirmBtn").onclick = ()=>{
+      toast("購入確定（仮）: " + picked.length + "点");
+    };
+    $("dbgBtn").onclick = ()=>{
+      const info = {
+        url: location.href,
+        ua: navigator.userAgent,
+        hasBarcodeDetector: ("BarcodeDetector" in window),
+        hasMediaDevices: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
+      };
+      $("dbgText").textContent = JSON.stringify(info, null, 2);
+      toast("状態を表示しました");
     };
 
-    // init
-    showScreen("home");
-    setDebug("まだ開始していません");
+    renderList();
+    updateCounts();
+    $("statusPill").textContent = "準備完了";
+    $("statusPill").className = "pill ok";
   </script>
 </body>
 </html>
