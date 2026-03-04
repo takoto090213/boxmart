@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
   <title>BOXMART</title>
   <style>
-    :root{--blue:#2563eb;--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--radius:16px;--shadow:0 8px 24px rgba(17,24,39,.08);}
+    :root{--blue:#2563eb;--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--radius:16px;--shadow:0 8px 24px rgba(17,24,39,.08);} 
     *{box-sizing:border-box}
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;background:var(--bg);color:var(--text)}
     .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
@@ -39,12 +39,14 @@
     .list{display:flex;flex-direction:column;gap:10px}
     .itemRow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--border);border-radius:14px;background:#fff}
     .sku{font-weight:900;letter-spacing:.3px}
+    .name{font-weight:800;margin-top:2px}
     .mini{font-size:12px;color:var(--muted)}
+    code{background:#f3f4f6;border:1px solid #e5e7eb;padding:1px 6px;border-radius:999px}
     pre{white-space:pre-wrap;word-break:break-word;margin:0}
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v27 ZXING-FALLBACK</div>
+  <div class="build">BUILD TAKEOUT v28 MASTER+ZXING</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -69,11 +71,16 @@
         </div>
 
         <div class="card">
-          <div class="muted">
-            <b>v27の狙い</b><br/>
-            iPhone Safari で <code>BarcodeDetector</code> が検出しないケースがあるため、<u>ZXing（JS）をフォールバック</u>として追加しました。<br/>
-            ※外部ライブラリを読み込みます（unpkg）。
+          <div class="row" style="margin-bottom:8px">
+            <div>
+              <div style="font-weight:900">マスタ参照</div>
+              <div class="muted">SKUから 商品名/価格/賞味期限 を表示します</div>
+            </div>
+            <div class="pill warn" id="masterPill">未読込</div>
           </div>
+          <div class="muted">CSV: <code id="masterUrl">https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv</code></div>
+          <div style="height:10px"></div>
+          <button class="btn secondary small" id="loadMasterBtn">マスタを読み込む</button>
         </div>
       </section>
 
@@ -115,7 +122,8 @@
           <button class="btn" id="confirmBtn" disabled>購入確定（0点）</button>
           <div class="muted" style="margin-top:10px">
             ・同じQRを2回読むと「重複」で弾きます<br/>
-            ・QRの中身は <code>BOXMART:ITEM=SKUxxx-yy:SIG=....</code> を想定
+            ・QRの中身は <code>BOXMART:ITEM=SKUxxx-yy:SIG=....</code> を想定<br/>
+            ・マスタ未読込でもSKUだけは記録されます
           </div>
         </div>
       </section>
@@ -131,7 +139,7 @@
           <div class="row" style="margin-bottom:10px">
             <div>
               <div style="font-weight:900">診断</div>
-              <div class="muted">読み取り方式 / ライブラリ状態</div>
+              <div class="muted">読み取り方式 / マスタ読込状態</div>
             </div>
             <button class="btn secondary small" id="dbgBtn">状態表示</button>
           </div>
@@ -150,15 +158,22 @@
     </div>
   </nav>
 
-  <!-- ZXing fallback (loaded only when needed) -->
   <script>
+    const MASTER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv";
+
     const $ = (id)=>document.getElementById(id);
     const toastEl = $("toast");
     function toast(msg){
       toastEl.textContent = msg;
       toastEl.classList.add("show");
       clearTimeout(toastEl._t);
-      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1800);
+      toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1900);
+    }
+
+    function setPill(id, text, cls){
+      const el = $(id);
+      el.textContent = text;
+      el.className = "pill " + cls;
     }
 
     function showScreen(name){
@@ -168,11 +183,109 @@
       document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
       if(name!=="takeout") stopCamera();
     }
-    document.querySelectorAll(".tab").forEach(t=>{
-      t.addEventListener("click", ()=>showScreen(t.dataset.tab));
-    });
-    $("goTakeout").onclick = ()=>showScreen("takeout");
+    document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showScreen(t.dataset.tab)));
+    $("goTakeout").onclick = async ()=>{
+      if(!masterIndexLoaded) toast("マスタ未読込（SKUのみ表示になります）");
+      showScreen("takeout");
+    };
 
+    // CSV parser (quoted commas対応)
+    function parseCSV(text){
+      const rows=[];
+      let i=0, field="", row=[];
+      let inQ=false;
+      while(i<text.length){
+        const c=text[i];
+        if(inQ){
+          if(c==='"'){
+            if(text[i+1]==='"'){ field+='"'; i+=2; continue; }
+            inQ=false; i++; continue;
+          }
+          field+=c; i++; continue;
+        } else {
+          if(c==='"'){ inQ=true; i++; continue; }
+          if(c===','){ row.push(field); field=""; i++; continue; }
+          if(c==='\r'){ i++; continue; }
+          if(c==='\n'){ row.push(field); rows.push(row); row=[]; field=""; i++; continue; }
+          field+=c; i++; continue;
+        }
+      }
+      row.push(field);
+      rows.push(row);
+      while(rows.length && rows[rows.length-1].every(x=>String(x||"").trim()==="")) rows.pop();
+      return rows;
+    }
+
+    // master index
+    let masterIndex = {}; // key: code_number -> {name, price, exp}
+    let masterIndexLoaded = false;
+    let masterMeta = { rows:0, headers:[] };
+
+    function normKey(s){ return String(s||"").trim(); }
+    function parsePrice(s){
+      const t = String(s||"").replace(/[￥¥,\s]/g, "");
+      const n = Number(t);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    async function loadMaster(){
+      setPill("masterPill","読込中…","warn");
+      try{
+        const res = await fetch(MASTER_CSV_URL, { cache: "no-store" });
+        if(!res.ok) throw new Error("fetch failed " + res.status);
+        const csv = await res.text();
+        const rows = parseCSV(csv);
+        if(!rows.length) throw new Error("empty csv");
+
+        const header = rows[0].map(h=>String(h||"").trim());
+        masterMeta.headers = header;
+
+        const idx = (names)=>{
+          for(const n of names){
+            const i = header.findIndex(h=>h===n);
+            if(i>=0) return i;
+          }
+          return -1;
+        };
+        let cCode = idx(["コード番号","code","code_number","codeNumber"]);
+        let cName = idx(["商品名","name","product","product_name"]);
+        let cPrice = idx(["販売価格","価格","price","sell_price"]);
+        let cExp = idx(["賞味期限","期限","exp","expiry","expiration"]);
+        if(cCode<0) cCode = 0;
+        if(cName<0) cName = 1;
+        if(cPrice<0) cPrice = 2;
+        if(cExp<0) cExp = 3;
+
+        const index = {};
+        for(let r=1;r<rows.length;r++){
+          const row = rows[r];
+          const code = normKey(row[cCode]);
+          if(!code) continue;
+          index[code] = {
+            code,
+            name: String(row[cName]||"").trim(),
+            price: parsePrice(row[cPrice]),
+            exp: String(row[cExp]||"").trim()
+          };
+        }
+        masterIndex = index;
+        masterIndexLoaded = true;
+        masterMeta.rows = Object.keys(index).length;
+        setPill("masterPill",`読込OK (${masterMeta.rows})`,"ok");
+        toast("マスタ読み込み完了");
+        enrichPicked();
+        renderList();
+      } catch(e){
+        masterIndexLoaded = false;
+        setPill("masterPill","読込失敗","bad");
+        toast("マスタ読込失敗: " + (e && e.message ? e.message : e));
+      }
+    }
+
+    $("loadMasterBtn").onclick = loadMaster;
+    $("masterUrl").textContent = MASTER_CSV_URL;
+
+    // QR parsing
     function parseBoxmart(raw){
       if(!raw) return null;
       const s = String(raw).trim();
@@ -184,22 +297,55 @@
       return { raw:s, item_id, sig };
     }
 
+    // picked list
     const picked = [];
     const pickedSet = new Set();
+
+    function enrichOne(it){
+      if(!masterIndexLoaded) return it;
+      const m = masterIndex[normKey(it.item_id)];
+      if(m){
+        it.name = m.name || it.name;
+        it.price = Number.isFinite(m.price) ? m.price : it.price;
+        it.exp = m.exp || it.exp;
+        it._masterHit = true;
+      } else {
+        it._masterHit = false;
+      }
+      return it;
+    }
+    function enrichPicked(){ picked.forEach(enrichOne); }
+
+    function formatYen(n){
+      const v = Number(n);
+      if(!Number.isFinite(v) || v<=0) return "-";
+      return "¥" + v.toLocaleString("ja-JP");
+    }
+
+    function updateCounts(){
+      $("countPill").textContent = `${picked.length}点`;
+      const sum = picked.reduce((a,it)=>a+(Number(it.price)||0),0);
+      $("sumText").textContent = "¥" + sum.toLocaleString("ja-JP");
+    }
 
     function renderList(){
       const list = $("list");
       list.innerHTML = "";
       if(picked.length===0){
         list.innerHTML = '<div class="muted">まだスキャンされていません。</div>';
-      }else{
+      } else {
         picked.forEach((it, idx)=>{
           const div = document.createElement("div");
           div.className = "itemRow";
+          const hit = (it._masterHit===true);
+          const hitText = masterIndexLoaded ? (hit ? "マスタ一致" : "マスタ未登録") : "マスタ未読込";
+          const hitCls = masterIndexLoaded ? (hit ? "ok" : "warn") : "warn";
           div.innerHTML = `
-            <div>
+            <div style="min-width:0">
               <div class="sku">${it.item_id}</div>
-              <div class="mini">sig: ${it.sig || "-"}</div>
+              <div class="name">${(it.name||"").trim() ? it.name : "（商品名未取得）"}</div>
+              <div class="mini">価格: ${formatYen(it.price)} / 賞味期限: ${it.exp||"-"}</div>
+              <div class="mini"><span class="pill ${hitCls}" style="padding:3px 8px">${hitText}</span></div>
             </div>
             <button class="btn secondary small" data-del="${idx}">削除</button>
           `;
@@ -217,11 +363,7 @@
       });
       $("confirmBtn").disabled = (picked.length===0);
       $("confirmBtn").textContent = `購入確定（${picked.length}点）`;
-    }
-
-    function updateCounts(){
-      $("countPill").textContent = `${picked.length}点`;
-      $("sumText").textContent = "¥0";
+      updateCounts();
     }
 
     function addCandidate(p){
@@ -230,25 +372,20 @@
         return;
       }
       pickedSet.add(p.item_id);
+      p.name = ""; p.price = 0; p.exp = "";
+      enrichOne(p);
       picked.push(p);
       toast("追加: " + p.item_id);
-      updateCounts();
       renderList();
     }
 
+    // camera + scan (BarcodeDetector -> ZXing fallback)
     let stream = null;
     let detector = null;
     let loopTimer = null;
     let lastRaw = "";
-    let zxingLoaded = false;
     let zxingReader = null;
     let activeMode = "-";
-
-    function setStatus(pillId, text, cls){
-      const el = $(pillId);
-      el.textContent = text;
-      el.className = "pill " + cls;
-    }
 
     async function stopCamera(){
       try{ if(loopTimer){ clearTimeout(loopTimer); loopTimer=null; } }catch(e){}
@@ -263,17 +400,17 @@
       lastRaw = "";
       activeMode = "-";
       $("modePill").textContent = "-";
-      setStatus("readyPill","停止","warn");
+      setPill("readyPill","停止","warn");
       $("camInfo").textContent = "停止しました";
-      setStatus("statusPill","停止","warn");
+      setPill("statusPill","停止","warn");
     }
 
     function loadZxing(){
-      if(zxingLoaded) return Promise.resolve();
       return new Promise((resolve, reject)=>{
+        if(window.ZXing && window.ZXing.BrowserQRCodeReader) return resolve();
         const s = document.createElement("script");
         s.src = "https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js";
-        s.onload = ()=>{ zxingLoaded=true; resolve(); };
+        s.onload = ()=>resolve();
         s.onerror = ()=>reject(new Error("ZXing load failed"));
         document.head.appendChild(s);
       });
@@ -281,19 +418,16 @@
 
     async function startCamera(){
       await stopCamera();
-      setStatus("readyPill","起動中…","warn");
+      setPill("readyPill","起動中…","warn");
       $("camInfo").textContent = "カメラを起動しています…";
-      setStatus("statusPill","起動中…","warn");
+      setPill("statusPill","起動中…","warn");
 
       const v = $("nativeVideo");
       const constraintsA = { audio:false, video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1280 }, height:{ ideal:720 } } };
       const constraintsB = { audio:false, video:{ facingMode:{ ideal:"environment" } } };
 
-      try{
-        stream = await navigator.mediaDevices.getUserMedia(constraintsA);
-      }catch(e){
-        stream = await navigator.mediaDevices.getUserMedia(constraintsB);
-      }
+      try{ stream = await navigator.mediaDevices.getUserMedia(constraintsA); }
+      catch(e){ stream = await navigator.mediaDevices.getUserMedia(constraintsB); }
 
       v.setAttribute("playsinline","true");
       v.setAttribute("webkit-playsinline","true");
@@ -301,89 +435,73 @@
       v.srcObject = stream;
       try{ await v.play(); }catch(e){}
 
-      // Try BarcodeDetector first
       detector = null;
       if("BarcodeDetector" in window){
         try{ detector = new BarcodeDetector({ formats:["qr_code"] }); }
         catch(e){ try{ detector = new BarcodeDetector(); }catch(e2){ detector=null; } }
       }
 
-      // Decide mode
-      if(detector){
-        activeMode = "BarcodeDetector";
-      }else{
-        activeMode = "ZXing";
-      }
+      if(detector){ activeMode = "BarcodeDetector"; }
+      else{ activeMode = "ZXing"; }
       $("modePill").textContent = activeMode;
 
-      setStatus("readyPill","準備完了","ok");
+      setPill("readyPill","準備完了","ok");
       $("camInfo").textContent = "QRを枠内に入れてください";
-      setStatus("statusPill","準備完了","ok");
+      setPill("statusPill","準備完了","ok");
 
       const loop = async ()=>{
         if(!stream) return;
-
         const vw = v.videoWidth || 0;
         const vh = v.videoHeight || 0;
         if(vw===0 || vh===0){
           $("camInfo").textContent = "映像が 0x0 のままです → 再起動を押してください";
-          setStatus("readyPill","映像未表示","warn");
+          setPill("readyPill","映像未表示","warn");
           loopTimer = setTimeout(loop, 250);
           return;
         }
 
         try{
-          let raw = "";
           if(detector){
             const codes = await detector.detect(v);
-            if(codes && codes.length) raw = codes[0].rawValue || "";
-          }else{
-            // ZXing fallback: load once and decode from video device stream
-            if(!zxingReader){
-              await loadZxing();
-              const ZXing = window.ZXing;
-              zxingReader = new ZXing.BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 120 });
-              // decode continuously from video element (no need deviceId; stream already attached)
-              // Use decodeFromVideoElementContinuously if available
-              if(zxingReader.decodeFromVideoElementContinuously){
-                zxingReader.decodeFromVideoElementContinuously(v, (result, err)=>{
-                  if(result && result.getText){
-                    const t = result.getText();
-                    if(t && t !== lastRaw){
-                      lastRaw = t;
-                      const p = parseBoxmart(t);
-                      if(p) addCandidate(p);
-                      else toast("形式不明（BOXMART以外？）");
-                    }
-                  }
-                });
-              }else{
-                // fallback: try decodeOnce per loop using decodeFromVideoElement
+            if(codes && codes.length){
+              const raw = codes[0].rawValue || "";
+              if(raw && raw !== lastRaw){
+                lastRaw = raw;
+                const p = parseBoxmart(raw);
+                if(p) addCandidate(p);
+                else toast("形式不明（BOXMART以外？）");
               }
             }
-            // If we are in continuous mode, nothing to do here.
+          } else {
+            if(!zxingReader){
+              await loadZxing();
+              zxingReader = new window.ZXing.BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 120 });
+              zxingReader.decodeFromVideoElementContinuously(v, (result, err)=>{
+                if(result && result.getText){
+                  const t = result.getText();
+                  if(t && t !== lastRaw){
+                    lastRaw = t;
+                    const p = parseBoxmart(t);
+                    if(p) addCandidate(p);
+                    else toast("形式不明（BOXMART以外？）");
+                  }
+                }
+              });
+              toast("ZXingで読み取り開始");
+            }
           }
+        } catch(e){}
 
-          if(raw && raw !== lastRaw){
-            lastRaw = raw;
-            const p = parseBoxmart(raw);
-            if(p) addCandidate(p);
-            else toast("形式不明（BOXMART以外？）");
-          }
-        }catch(e){
-          // ignore
-        }
-        loopTimer = setTimeout(loop, 140);
+        loopTimer = setTimeout(loop, 160);
       };
       loop();
     }
 
-    $("startBtn").onclick = ()=>startCamera();
-    $("rebootBtn").onclick = ()=>startCamera();
+    $("startBtn").onclick = startCamera;
+    $("rebootBtn").onclick = startCamera;
     $("clearBtn").onclick = ()=>{
       picked.length = 0;
       pickedSet.clear();
-      updateCounts();
       renderList();
       toast("クリアしました");
     };
@@ -397,24 +515,28 @@
     $("confirmBtn").onclick = ()=>{
       toast("購入確定（仮）: " + picked.length + "点");
     };
-    $("dbgBtn").onclick = async ()=>{
+
+    $("dbgBtn").onclick = ()=>{
       const v = $("nativeVideo");
-      let zxing = { loaded: zxingLoaded };
       $("dbgText").textContent = JSON.stringify({
         url: location.href,
-        ua: navigator.userAgent,
         secure: location.protocol,
+        ua: navigator.userAgent,
         hasMediaDevices: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
         hasBarcodeDetector: ("BarcodeDetector" in window),
         activeMode,
         video: { videoWidth: v.videoWidth||0, videoHeight: v.videoHeight||0, readyState: v.readyState },
-        zxing
+        master: { loaded: masterIndexLoaded, rows: masterMeta.rows, headers: masterMeta.headers.slice(0,10) }
       }, null, 2);
       toast("状態を表示しました");
     };
 
-    renderList(); updateCounts();
-    setStatus("statusPill","準備完了","ok");
+    renderList();
+    updateCounts();
+    setPill("statusPill","準備完了","ok");
+
+    // auto-load master
+    loadMaster();
   </script>
 </body>
 </html>
