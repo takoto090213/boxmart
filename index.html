@@ -32,34 +32,19 @@
     .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 6px;border-radius:14px;border:1px solid transparent;color:var(--muted);font-size:12px;user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
     .tab.active{color:var(--blue);border-color:#dbeafe;background:#eff6ff}
     .icon{font-size:18px;line-height:1}
-
-    .scannerWrap{
-      border:1px solid var(--border);
-      border-radius:18px;
-      overflow:hidden;
-      background:#000;
-      position:relative;
-      height:min(56vh, 420px);
-    }
-    #nativeVideo{
-      position:absolute; inset:0;
-      width:100%; height:100%;
-      object-fit:cover;
-      background:#000;
-      pointer-events:none;
-      transform: translateZ(0);
-    }
+    .scannerWrap{border:1px solid var(--border);border-radius:18px;overflow:hidden;background:#000;position:relative;height:min(56vh, 420px)}
+    #nativeVideo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#000;pointer-events:none;transform:translateZ(0)}
     .guide{position:absolute;inset:12%;border:3px solid rgba(255,255,255,.92);border-radius:18px;pointer-events:none}
     .guide::after{content:"";position:absolute;inset:12px;border:2px dashed rgba(255,255,255,.35);border-radius:14px}
-    canvas{display:none}
     .list{display:flex;flex-direction:column;gap:10px}
     .itemRow{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;padding:12px;border:1px solid var(--border);border-radius:14px;background:#fff}
     .sku{font-weight:900;letter-spacing:.3px}
     .mini{font-size:12px;color:var(--muted)}
+    pre{white-space:pre-wrap;word-break:break-word;margin:0}
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v26 iOS-NATIVE-CAM</div>
+  <div class="build">BUILD TAKEOUT v27 ZXING-FALLBACK</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -82,11 +67,12 @@
           <div style="height:10px"></div>
           <button class="btn" id="goTakeout"><span class="icon">🛍️</span>持ち出し（購入確定）<span style="margin-left:auto">→</span></button>
         </div>
+
         <div class="card">
           <div class="muted">
-            <b>今回の修正点</b><br/>
-            v25診断で「映像は取れている（480x640, 黒率0）」が確認できたので、<u>表示の黒帯/黒画面はレイヤー構造の問題</u>と確定。<br/>
-            v26はプレビューを <u>ネイティブgetUserMediaのvideo表示</u>に統一し、黒帯が出ない構造にしています。
+            <b>v27の狙い</b><br/>
+            iPhone Safari で <code>BarcodeDetector</code> が検出しないケースがあるため、<u>ZXing（JS）をフォールバック</u>として追加しました。<br/>
+            ※外部ライブラリを読み込みます（unpkg）。
           </div>
         </div>
       </section>
@@ -99,15 +85,13 @@
 
         <div class="row" style="margin:0 2px 10px">
           <div class="muted" id="camInfo">「カメラ起動」を押してください</div>
-          <div class="pill" id="modePill">native</div>
+          <div class="pill" id="modePill">-</div>
         </div>
 
         <div class="scannerWrap card" style="padding:0">
           <video id="nativeVideo" playsinline muted></video>
           <div class="guide"></div>
         </div>
-
-        <canvas id="probe" width="240" height="180"></canvas>
 
         <div class="card">
           <div class="row">
@@ -146,12 +130,12 @@
         <div class="card">
           <div class="row" style="margin-bottom:10px">
             <div>
-              <div style="font-weight:900">デバッグ</div>
-              <div class="muted">状態確認用</div>
+              <div style="font-weight:900">診断</div>
+              <div class="muted">読み取り方式 / ライブラリ状態</div>
             </div>
             <button class="btn secondary small" id="dbgBtn">状態表示</button>
           </div>
-          <div class="muted" id="dbgText">-</div>
+          <div class="muted"><pre id="dbgText">-</pre></div>
         </div>
       </section>
     </main>
@@ -166,6 +150,7 @@
     </div>
   </nav>
 
+  <!-- ZXing fallback (loaded only when needed) -->
   <script>
     const $ = (id)=>document.getElementById(id);
     const toastEl = $("toast");
@@ -175,6 +160,7 @@
       clearTimeout(toastEl._t);
       toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1800);
     }
+
     function showScreen(name){
       ["home","takeout","next","settings"].forEach(s=>{
         $("screen-"+s).style.display = (s===name) ? "" : "none";
@@ -254,6 +240,15 @@
     let detector = null;
     let loopTimer = null;
     let lastRaw = "";
+    let zxingLoaded = false;
+    let zxingReader = null;
+    let activeMode = "-";
+
+    function setStatus(pillId, text, cls){
+      const el = $(pillId);
+      el.textContent = text;
+      el.className = "pill " + cls;
+    }
 
     async function stopCamera(){
       try{ if(loopTimer){ clearTimeout(loopTimer); loopTimer=null; } }catch(e){}
@@ -266,20 +261,29 @@
       stream = null;
       detector = null;
       lastRaw = "";
-      $("readyPill").textContent = "停止";
-      $("readyPill").className = "pill warn";
+      activeMode = "-";
+      $("modePill").textContent = "-";
+      setStatus("readyPill","停止","warn");
       $("camInfo").textContent = "停止しました";
-      $("statusPill").textContent = "停止";
-      $("statusPill").className = "pill warn";
+      setStatus("statusPill","停止","warn");
+    }
+
+    function loadZxing(){
+      if(zxingLoaded) return Promise.resolve();
+      return new Promise((resolve, reject)=>{
+        const s = document.createElement("script");
+        s.src = "https://unpkg.com/@zxing/library@0.20.0/umd/index.min.js";
+        s.onload = ()=>{ zxingLoaded=true; resolve(); };
+        s.onerror = ()=>reject(new Error("ZXing load failed"));
+        document.head.appendChild(s);
+      });
     }
 
     async function startCamera(){
       await stopCamera();
-      $("readyPill").textContent = "起動中…";
-      $("readyPill").className = "pill warn";
+      setStatus("readyPill","起動中…","warn");
       $("camInfo").textContent = "カメラを起動しています…";
-      $("statusPill").textContent = "起動中…";
-      $("statusPill").className = "pill warn";
+      setStatus("statusPill","起動中…","warn");
 
       const v = $("nativeVideo");
       const constraintsA = { audio:false, video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1280 }, height:{ ideal:720 } } };
@@ -297,54 +301,79 @@
       v.srcObject = stream;
       try{ await v.play(); }catch(e){}
 
+      // Try BarcodeDetector first
+      detector = null;
       if("BarcodeDetector" in window){
         try{ detector = new BarcodeDetector({ formats:["qr_code"] }); }
         catch(e){ try{ detector = new BarcodeDetector(); }catch(e2){ detector=null; } }
+      }
+
+      // Decide mode
+      if(detector){
+        activeMode = "BarcodeDetector";
       }else{
-        detector = null;
+        activeMode = "ZXing";
       }
+      $("modePill").textContent = activeMode;
 
-      if(!detector){
-        $("readyPill").textContent = "映像のみ";
-        $("readyPill").className = "pill warn";
-        $("camInfo").textContent = "このブラウザはQR検出に非対応です（手入力してください）";
-        $("statusPill").textContent = "映像のみ";
-        $("statusPill").className = "pill warn";
-        return;
-      }
-
-      $("readyPill").textContent = "準備完了";
-      $("readyPill").className = "pill ok";
+      setStatus("readyPill","準備完了","ok");
       $("camInfo").textContent = "QRを枠内に入れてください";
-      $("statusPill").textContent = "準備完了";
-      $("statusPill").className = "pill ok";
+      setStatus("statusPill","準備完了","ok");
 
       const loop = async ()=>{
-        if(!stream || !detector) return;
+        if(!stream) return;
+
+        const vw = v.videoWidth || 0;
+        const vh = v.videoHeight || 0;
+        if(vw===0 || vh===0){
+          $("camInfo").textContent = "映像が 0x0 のままです → 再起動を押してください";
+          setStatus("readyPill","映像未表示","warn");
+          loopTimer = setTimeout(loop, 250);
+          return;
+        }
+
         try{
-          const vw = v.videoWidth || 0;
-          const vh = v.videoHeight || 0;
-          if(vw===0 || vh===0){
-            $("camInfo").textContent = "映像が 0x0 のままです → 再起動を押してください";
-            $("readyPill").textContent = "映像未表示";
-            $("readyPill").className = "pill warn";
-            loopTimer = setTimeout(loop, 300);
-            return;
-          }
-          const codes = await detector.detect(v);
-          if(codes && codes.length){
-            const raw = codes[0].rawValue || "";
-            if(raw && raw !== lastRaw){
-              lastRaw = raw;
-              const p = parseBoxmart(raw);
-              if(p) addCandidate(p);
-              else toast("形式不明（BOXMART以外？）");
+          let raw = "";
+          if(detector){
+            const codes = await detector.detect(v);
+            if(codes && codes.length) raw = codes[0].rawValue || "";
+          }else{
+            // ZXing fallback: load once and decode from video device stream
+            if(!zxingReader){
+              await loadZxing();
+              const ZXing = window.ZXing;
+              zxingReader = new ZXing.BrowserQRCodeReader(undefined, { delayBetweenScanAttempts: 120 });
+              // decode continuously from video element (no need deviceId; stream already attached)
+              // Use decodeFromVideoElementContinuously if available
+              if(zxingReader.decodeFromVideoElementContinuously){
+                zxingReader.decodeFromVideoElementContinuously(v, (result, err)=>{
+                  if(result && result.getText){
+                    const t = result.getText();
+                    if(t && t !== lastRaw){
+                      lastRaw = t;
+                      const p = parseBoxmart(t);
+                      if(p) addCandidate(p);
+                      else toast("形式不明（BOXMART以外？）");
+                    }
+                  }
+                });
+              }else{
+                // fallback: try decodeOnce per loop using decodeFromVideoElement
+              }
             }
+            // If we are in continuous mode, nothing to do here.
+          }
+
+          if(raw && raw !== lastRaw){
+            lastRaw = raw;
+            const p = parseBoxmart(raw);
+            if(p) addCandidate(p);
+            else toast("形式不明（BOXMART以外？）");
           }
         }catch(e){
           // ignore
         }
-        loopTimer = setTimeout(loop, 160);
+        loopTimer = setTimeout(loop, 140);
       };
       loop();
     }
@@ -368,21 +397,24 @@
     $("confirmBtn").onclick = ()=>{
       toast("購入確定（仮）: " + picked.length + "点");
     };
-    $("dbgBtn").onclick = ()=>{
-      const info = {
+    $("dbgBtn").onclick = async ()=>{
+      const v = $("nativeVideo");
+      let zxing = { loaded: zxingLoaded };
+      $("dbgText").textContent = JSON.stringify({
         url: location.href,
         ua: navigator.userAgent,
-        hasBarcodeDetector: ("BarcodeDetector" in window),
+        secure: location.protocol,
         hasMediaDevices: !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia),
-      };
-      $("dbgText").textContent = JSON.stringify(info, null, 2);
+        hasBarcodeDetector: ("BarcodeDetector" in window),
+        activeMode,
+        video: { videoWidth: v.videoWidth||0, videoHeight: v.videoHeight||0, readyState: v.readyState },
+        zxing
+      }, null, 2);
       toast("状態を表示しました");
     };
 
-    renderList();
-    updateCounts();
-    $("statusPill").textContent = "準備完了";
-    $("statusPill").className = "pill ok";
+    renderList(); updateCounts();
+    setStatus("statusPill","準備完了","ok");
   </script>
 </body>
 </html>
