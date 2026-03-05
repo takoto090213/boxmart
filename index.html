@@ -46,7 +46,7 @@
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v29 CONFIRM+GAS</div>
+  <div class="build">BUILD TAKEOUT v30 CONFIRM+GAS</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -523,7 +523,7 @@
         note: "boxmart",
         // 1件ずつの明細（SKU/SIG + マスタ参照の結果）
         items: picked.map(p=>({
-          item_id: p.item_id || "",
+          item_id: (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
           sig: p.sig || "",
           name: p.master?.name || p.name || "",
           price: Number(p.master?.price ?? p.price ?? 0) || 0,
@@ -548,11 +548,12 @@
           const per = {
             type: "takeout_confirm",
             mode: "takeout",
+            screen: "takeout_confirm",
             note: `confirm|n=${picked.length}|idx=${i+1}|sum=${sum}|boxmart`,
-            item_id: p.item_id || "",
+            item_id: (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
             sig: p.sig || "",
             // GAS側で raw を見れば何が起きたか追える
-            raw: `CONFIRM:ITEM=${p.item_id||""}:SIG=${p.sig||""}`
+            raw: (p.raw || `BOXMART:ITEM=${(p.item_id||p.itemId||"")}:SIG=${(p.sig||"")}`)
           };
           await fetch(GAS_WEBAPP_URL, {
             method: "POST",
