@@ -50,7 +50,7 @@
 </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v33 ACCOUNT-SAVEFIX</div>
+  <div class="build">BUILD TAKEOUT v34 ACCOUNT-PAYLOAD-FIX</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -231,22 +231,12 @@
     }
     function refreshAccountUI(){
       const a = loadAccount();
-      const summaryEl = document.getElementById("acctSummary");
-      if(summaryEl){
-        const parts = [];
-        if(a.account_name) parts.push(a.account_name);
-        if(a.account_zip) parts.push(a.account_zip);
-        if(a.account_phone) parts.push(a.account_phone);
-        summaryEl.textContent = parts.length ? parts.join(" / ") : "未登録";
-      }
       const nameEl = document.getElementById("in_name");
-      if(nameEl) nameEl.value = a.account_name || "";
-      const zipEl = document.getElementById("in_zip");
-      if(zipEl) zipEl.value = a.account_zip || "";
-      const addrEl = document.getElementById("in_addr");
-      if(addrEl) addrEl.value = a.account_address || "";
-      const phoneEl = document.getElementById("in_phone");
-      if(phoneEl) phoneEl.value = a.account_phone || "";
+      if(!nameEl) return; // not on settings
+      nameEl.value = a.account_name || "";
+      document.getElementById("in_zip").value = a.account_zip || "";
+      document.getElementById("in_addr").value = a.account_address || "";
+      document.getElementById("in_phone").value = a.account_phone || "";
     }
 
     function setPill(id, text, cls){
@@ -628,6 +618,11 @@
             type: "takeout_confirm",
             mode: "takeout",
             screen: "takeout_confirm",
+            userId: getUserId(),
+            account_name: (loadAccount().account_name || ""),
+            account_zip: (loadAccount().account_zip || ""),
+            account_address: (loadAccount().account_address || ""),
+            account_phone: (loadAccount().account_phone || ""),
             // noteにもSKUを入れて目視で追えるようにする
             note: `confirm|n=${picked.length}|idx=${i+1}|sum=${sum}|sku=${(p.item_id||p.itemId||"")}|boxmart`,
             // 互換のため複数キーで送る（GAS側の取り出し揺れ対策）
@@ -685,49 +680,6 @@
 
     // auto-load master
     loadMaster();
-  
-    function bindAccountButtons(){
-      const saveBtn = document.getElementById("saveAcct");
-      const clearBtn = document.getElementById("clearAcct");
-
-      if(saveBtn){
-        saveBtn.onclick = () => {
-          try{
-            const a = {
-              account_name: (document.getElementById("in_name")?.value || "").trim(),
-              account_zip: (document.getElementById("in_zip")?.value || "").trim(),
-              account_address: (document.getElementById("in_addr")?.value || "").trim(),
-              account_phone: (document.getElementById("in_phone")?.value || "").trim()
-            };
-            saveAccount(a);
-            refreshAccountUI();
-            toast("保存しました");
-          }catch(e){
-            console.error(e);
-            toast("保存できませんでした");
-          }
-        };
-      }
-
-      if(clearBtn){
-        clearBtn.onclick = () => {
-          try{
-            saveAccount({});
-            refreshAccountUI();
-            toast("消去しました");
-          }catch(e){
-            console.error(e);
-            toast("消去できませんでした");
-          }
-        };
-      }
-    }
-
-    document.addEventListener("DOMContentLoaded", () => {
-      bindAccountButtons();
-      refreshAccountUI();
-    });
-
-</script>
+  </script>
 </body>
 </html>
