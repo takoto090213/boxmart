@@ -50,7 +50,7 @@
 </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v34 ACCOUNT-PAYLOAD-FIX</div>
+  <div class="build">BUILD TAKEOUT v35 NOTE-FALLBACK</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -614,27 +614,28 @@
         // 既存のGAS（1行=1イベント）に合わせて「1商品=1POST」で送る
         for(let i=0;i<picked.length;i++){
           const p = picked[i];
+          const a = loadAccount();
+          const skuVal = (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || "");
+          const sigVal = (p.sig || "");
           const per = {
             type: "takeout_confirm",
             mode: "takeout",
             screen: "takeout_confirm",
             userId: getUserId(),
-            account_name: (loadAccount().account_name || ""),
-            account_zip: (loadAccount().account_zip || ""),
-            account_address: (loadAccount().account_address || ""),
-            account_phone: (loadAccount().account_phone || ""),
-            // noteにもSKUを入れて目視で追えるようにする
-            note: `confirm|n=${picked.length}|idx=${i+1}|sum=${sum}|sku=${(p.item_id||p.itemId||"")}|boxmart`,
-            // 互換のため複数キーで送る（GAS側の取り出し揺れ対策）
-            item_id: (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
-            itemId:  (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
-            sku:     (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
-            item:    (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
-            sig: (p.sig || ""),
-            // rawは必ず ITEM/SIG を含める（空欄にならないように）
+            // account_* は空で送り、GAS側の note フォールバックで復元させる
+            account_name: "",
+            account_zip: "",
+            account_address: "",
+            account_phone: "",
+            note: `confirm|n=${picked.length}|idx=${i+1}|sum=${sum}|sku=${skuVal}|name=${encodeURIComponent(a.account_name||"")}|zip=${encodeURIComponent(a.account_zip||"")}|addr=${encodeURIComponent(a.account_address||"")}|phone=${encodeURIComponent(a.account_phone||"")}|boxmart`,
+            item_id: skuVal,
+            itemId:  skuVal,
+            sku:     skuVal,
+            item:    skuVal,
+            sig: sigVal,
             raw: (p.raw && String(p.raw).trim())
               ? String(p.raw).trim()
-              : `BOXMART:ITEM=${(p.item_id||p.itemId||"")}:SIG=${(p.sig||"")}`
+              : `BOXMART:ITEM=${skuVal}:SIG=${sigVal}`
           };
           await fetch(GAS_WEBAPP_URL, {
             method: "POST",
