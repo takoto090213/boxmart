@@ -43,10 +43,14 @@
     .mini{font-size:12px;color:var(--muted)}
     code{background:#f3f4f6;border:1px solid #e5e7eb;padding:1px 6px;border-radius:999px}
     pre{white-space:pre-wrap;word-break:break-word;margin:0}
-  </style>
+  
+    .field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+    label{font-size:12px;color:var(--muted);font-weight:700}
+    input{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--border);font-size:16px}
+</style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v31 CONFIRM+GAS</div>
+  <div class="build">BUILD TAKEOUT v32 ACCOUNT-RESTORE</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -134,18 +138,52 @@
       </section>
 
       <section id="screen-settings" style="display:none">
-        <div class="h1">設定</div>
-        <div class="card">
-          <div class="row" style="margin-bottom:10px">
-            <div>
-              <div style="font-weight:900">診断</div>
-              <div class="muted">読み取り方式 / マスタ読込状態</div>
-            </div>
-            <button class="btn secondary small" id="dbgBtn">状態表示</button>
-          </div>
-          <div class="muted"><pre id="dbgText">-</pre></div>
-        </div>
-      </section>
+  <div class="h1">設定</div>
+
+  <div class="card">
+    <div style="font-weight:900;margin-bottom:6px">アカウント情報</div>
+    <div class="muted">ここで入力した内容は、この端末のブラウザに保存され、購入確定ログに一緒に送られます。</div>
+
+    <div class="field">
+      <label>名前（account_name）</label>
+      <input id="in_name" placeholder="例）神 拓斗"/>
+    </div>
+    <div class="field">
+      <label>郵便番号（account_zip）</label>
+      <input id="in_zip" placeholder="例）004-0005"/>
+    </div>
+    <div class="field">
+      <label>住所（account_address）</label>
+      <input id="in_addr" placeholder="例）札幌市..."/>
+    </div>
+    <div class="field">
+      <label>電話番号（account_phone）</label>
+      <input id="in_phone" placeholder="例）080-xxxx-xxxx"/>
+    </div>
+
+    <div class="row">
+      <button class="btn small" id="saveAcct">保存</button>
+      <button class="btn secondary small" id="clearAcct">消去</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row" style="margin-bottom:10px">
+      <div>
+        <div style="font-weight:900">診断</div>
+        <div class="muted">読み取り方式 / ライブラリ状態</div>
+      </div>
+      <button class="btn secondary small" id="dbgBtn">状態表示</button>
+    </div>
+    <div class="muted"><pre id="dbgText">-</pre></div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;margin-bottom:6px">接続先</div>
+    <div class="muted">GAS: <code>https://script.google.com/macros/s/AKfycbz7onceUh3_4KdppmfrZZOe0w8J1LpNwxkH4Mxs6MAv_CC0EhRszBJp9LNjKUETvcs1/exec</code></div>
+    <div class="muted">Master CSV: <code>https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv</code></div>
+  </div>
+</section>
     </main>
   </div>
 
@@ -171,6 +209,36 @@
       toastEl._t = setTimeout(()=>toastEl.classList.remove("show"), 1900);
     }
 
+    // -------- userId (device) --------
+    function getUserId(){
+      let id = localStorage.getItem("boxmart_userId");
+      if(!id){
+        id = "u_" + Math.random().toString(16).slice(2) + Date.now().toString(16).slice(-6);
+        localStorage.setItem("boxmart_userId", id);
+      }
+      return id;
+    }
+
+    // -------- account storage --------
+    function loadAccount(){
+      try{
+        const s = localStorage.getItem("boxmart_account");
+        return s ? JSON.parse(s) : {};
+      }catch(e){ return {}; }
+    }
+    function saveAccount(a){
+      localStorage.setItem("boxmart_account", JSON.stringify(a||{}));
+    }
+    function refreshAccountUI(){
+      const a = loadAccount();
+      const nameEl = document.getElementById("in_name");
+      if(!nameEl) return; // not on settings
+      nameEl.value = a.account_name || "";
+      document.getElementById("in_zip").value = a.account_zip || "";
+      document.getElementById("in_addr").value = a.account_address || "";
+      document.getElementById("in_phone").value = a.account_phone || "";
+    }
+
     function setPill(id, text, cls){
       const el = $(id);
       el.textContent = text;
@@ -183,7 +251,8 @@
       });
       document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
       if(name!=="takeout") stopCamera();
-    }
+          if(name==="settings") refreshAccountUI();
+}
     document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showScreen(t.dataset.tab)));
     $("goTakeout").onclick = async ()=>{
       if(!masterIndexLoaded) toast("マスタ未読込（SKUのみ表示になります）");
