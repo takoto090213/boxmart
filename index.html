@@ -46,7 +46,7 @@
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v30 CONFIRM+GAS</div>
+  <div class="build">BUILD TAKEOUT v31 CONFIRM+GAS</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -549,11 +549,18 @@
             type: "takeout_confirm",
             mode: "takeout",
             screen: "takeout_confirm",
-            note: `confirm|n=${picked.length}|idx=${i+1}|sum=${sum}|boxmart`,
+            // noteにもSKUを入れて目視で追えるようにする
+            note: `confirm|n=${picked.length}|idx=${i+1}|sum=${sum}|sku=${(p.item_id||p.itemId||"")}|boxmart`,
+            // 互換のため複数キーで送る（GAS側の取り出し揺れ対策）
             item_id: (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
-            sig: p.sig || "",
-            // GAS側で raw を見れば何が起きたか追える
-            raw: (p.raw || `BOXMART:ITEM=${(p.item_id||p.itemId||"")}:SIG=${(p.sig||"")}`)
+            itemId:  (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
+            sku:     (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
+            item:    (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
+            sig: (p.sig || ""),
+            // rawは必ず ITEM/SIG を含める（空欄にならないように）
+            raw: (p.raw && String(p.raw).trim())
+              ? String(p.raw).trim()
+              : `BOXMART:ITEM=${(p.item_id||p.itemId||"")}:SIG=${(p.sig||"")}`
           };
           await fetch(GAS_WEBAPP_URL, {
             method: "POST",
