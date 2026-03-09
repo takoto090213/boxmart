@@ -79,7 +79,7 @@
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v42 SAVE-ZXING-FIX</div>
+  <div class="build">BUILD TAKEOUT v43 ORDER-LOG</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -179,6 +179,23 @@
 
         <div class="order-grid" id="orderList">
           <div class="muted" style="grid-column: span 2; text-align: center; padding: 20px;">マスタを読み込んでください</div>
+        </div>
+
+        <div class="card">
+          <div class="row" style="margin-bottom:6px">
+            <div style="font-weight:900">発注候補</div>
+            <div class="mini">合計：<span id="orderSumText">¥0</span></div>
+          </div>
+          <div class="list" id="orderCartList"></div>
+          <div style="height:10px"></div>
+          <div class="row">
+            <button class="btn secondary small" id="clearOrderCartBtn">発注候補クリア</button>
+            <button class="btn small" id="submitOrderBtn" disabled>発注確定（0点）</button>
+          </div>
+          <div class="muted" style="margin-top:10px">
+            ・発注は <code>order_log</code> に 1商品=1行 で記録されます<br/>
+            ・数量は <code>qty</code> 列に入ります
+          </div>
         </div>
       </section>
 
@@ -426,6 +443,75 @@
     let masterIndexLoaded = false;
     let masterMeta = { rows:0, headers:[] };
 
+    
+    // 発注候補カート
+    const orderCart = {};
+    function getOrderCartItems(){
+      return Object.values(orderCart);
+    }
+    function addOrderItem(code){
+      const it = masterIndex[code];
+      if(!it){ toast("商品情報が見つかりません"); return; }
+      if(!orderCart[code]){
+        orderCart[code] = {
+          code: it.code,
+          name: it.name || "",
+          price: Number(it.price) || 0,
+          qty: 0
+        };
+      }
+      orderCart[code].qty += 1;
+      renderOrderCart();
+      toast("発注候補に追加: " + (it.name || code));
+    }
+    function changeOrderQty(code, delta){
+      if(!orderCart[code]) return;
+      orderCart[code].qty += delta;
+      if(orderCart[code].qty <= 0) delete orderCart[code];
+      renderOrderCart();
+    }
+    function clearOrderCart(){
+      Object.keys(orderCart).forEach(k => delete orderCart[k]);
+      renderOrderCart();
+      toast("発注候補をクリアしました");
+    }
+    function renderOrderCart(){
+      const list = $("orderCartList");
+      if(!list) return;
+      const items = getOrderCartItems();
+      list.innerHTML = "";
+      let sum = 0;
+      if(items.length === 0){
+        list.innerHTML = '<div class="muted">まだ発注候補はありません。</div>';
+      } else {
+        items.forEach(it => {
+          sum += (Number(it.price) || 0) * (Number(it.qty) || 0);
+          const row = document.createElement("div");
+          row.className = "itemRow";
+          row.innerHTML = `
+            <div style="min-width:0">
+              <div class="sku">${it.code}</div>
+              <div class="name">${it.name || "（商品名未取得）"}</div>
+              <div class="mini">単価: ¥${(Number(it.price)||0).toLocaleString("ja-JP")} / 数量: ${it.qty}</div>
+            </div>
+            <div style="display:flex;gap:6px;align-items:center">
+              <button class="btn secondary small" data-minus="${it.code}" style="width:auto">－</button>
+              <button class="btn secondary small" data-plus="${it.code}" style="width:auto">＋</button>
+            </div>
+          `;
+          list.appendChild(row);
+        });
+      }
+      $("orderSumText").textContent = "¥" + sum.toLocaleString("ja-JP");
+      const btn = $("submitOrderBtn");
+      if(btn){
+        btn.disabled = items.length === 0;
+        btn.textContent = `発注確定（${items.length}点）`;
+      }
+      list.querySelectorAll("[data-minus]").forEach(btn => btn.onclick = ()=> changeOrderQty(btn.getAttribute("data-minus"), -1));
+      list.querySelectorAll("[data-plus]").forEach(btn => btn.onclick = ()=> changeOrderQty(btn.getAttribute("data-plus"), 1));
+    }
+
     function normKey(s){ return String(s||"").trim(); }
     function parsePrice(s){
       const t = String(s||"").replace(/[￥¥,\s]/g, "");
@@ -538,7 +624,7 @@
               <div class="order-desc">${descText}</div>
               <div style="margin-top:auto; display:flex; align-items:center; justify-content:space-between;">
                 <div class="order-price">¥${it.price.toLocaleString("ja-JP")}</div>
-                <button class="btn small order-btn" onclick="event.stopPropagation(); toast('※検証用：カート追加のモックです')">追加</button>
+                <button class="btn small order-btn" onclick="event.stopPropagation(); addOrderItem('${it.code}')">追加</button>
               </div>
             </div>
           </div>
@@ -864,6 +950,56 @@
       }
     };
 
+    
+    $("clearOrderCartBtn").onclick = ()=> clearOrderCart();
+
+    $("submitOrderBtn").onclick = async ()=>{
+      const items = getOrderCartItems();
+      if(items.length===0){ toast("発注候補がありません"); return; }
+
+      const btn = $("submitOrderBtn");
+      btn.disabled = true;
+      btn.textContent = "送信中...";
+      toast("発注を送信しています…");
+
+      try{
+        const a = loadAccount();
+        for(let i=0;i<items.length;i++){
+          const item = items[i];
+          const payload = {
+            type: "order_request",
+            mode: "order",
+            screen: "order_catalog",
+            userId: getUserId(),
+            account_name: a.account_name || "",
+            account_zip: a.account_zip || "",
+            account_address: a.account_address || "",
+            account_phone: a.account_phone || "",
+            item_id: item.code || "",
+            item_name: item.name || "",
+            price: Number(item.price) || 0,
+            qty: Number(item.qty) || 0,
+            note: `order|idx=${i+1}|n=${items.length}|qty=${Number(item.qty)||0}|boxmart`,
+            raw: JSON.stringify(item)
+          };
+          await fetch(GAS_WEBAPP_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "text/plain;charset=utf-8" },
+            body: JSON.stringify(payload)
+          });
+        }
+        toast("発注を送信しました（order_log を確認してください）");
+        clearOrderCart();
+      }catch(err){
+        console.error(err);
+        toast("発注送信に失敗しました");
+      }finally{
+        renderOrderCart();
+      }
+    };
+
+
     $("dbgBtn").onclick = ()=>{
       const v = $("nativeVideo");
       $("dbgText").textContent = JSON.stringify({
@@ -880,6 +1016,7 @@
     };
 
     renderList();
+    renderOrderCart();
     updateCounts();
     setPill("statusPill","準備完了","ok");
     refreshAccountUI();
