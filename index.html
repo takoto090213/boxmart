@@ -9,8 +9,68 @@
     *{box-sizing:border-box}
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;background:var(--bg);color:var(--text)}
 
-    /* 下部タブに被らないよう余白を多めに確保（iOSのセーフエリア対応） */
-    .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+    /* =========================================
+       オープニングアニメーション（スプラッシュ）用CSS
+       ========================================= */
+    #splashScreen {
+      position: fixed;
+      inset: 0;
+      background: #ffffff;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.6s ease-out, visibility 0.6s ease-out;
+    }
+    #splashScreen.fade-out {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .splash-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: splashPulse 2s infinite ease-in-out;
+    }
+    .splash-logo-img {
+      width: 140px;
+      height: auto;
+      margin-bottom: 10px;
+      object-fit: contain;
+    }
+    .splash-title {
+      font-size: 32px;
+      font-weight: 900;
+      color: #1a365d;
+      letter-spacing: 2px;
+      margin: 0;
+      line-height: 1;
+    }
+    .splash-subtitle {
+      font-size: 11px;
+      font-weight: 700;
+      color: #2e9b60;
+      letter-spacing: 1px;
+      margin-top: 8px;
+    }
+    @keyframes splashPulse {
+      0% { transform: scale(0.98); opacity: 0.9; }
+      50% { transform: scale(1.02); opacity: 1; }
+      100% { transform: scale(0.98); opacity: 0.9; }
+    }
+
+    .app {
+      animation: appFadeIn 0.8s ease-out forwards;
+      animation-delay: 1.2s;
+      opacity: 0;
+      max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(110px + env(safe-area-inset-bottom));
+    }
+    @keyframes appFadeIn {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    /* ========================================= */
 
     header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .brand{font-weight:800;color:var(--blue);letter-spacing:.3px}
@@ -54,7 +114,6 @@
     /* 発注カタログ画面用スタイル */
     .order-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding-bottom: 40px; }
     .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
-    /* 画像が途切れないよう object-fit: contain に変更 */
     .order-img { width: 100%; height: 130px; object-fit: contain; background: #ffffff; display: block; padding: 8px; box-sizing: border-box; }
     .order-info { padding: 12px; display: flex; flex-direction: column; flex: 1; }
     .order-name { font-weight: 800; font-size: 14px; margin-bottom: 6px; line-height: 1.3; color: var(--text); }
@@ -71,15 +130,30 @@
     .modal-title { font-weight: 800; font-size: 16px; }
     .modal-close { background: #f3f4f6; border: none; width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: var(--muted); }
     .modal-body { padding: 16px; }
-    /* モーダル内の画像も途切れないよう contain に設定 */
     .modal-img { width: 100%; height: 240px; object-fit: contain; border-radius: 12px; margin-bottom: 16px; background: #ffffff; padding: 8px; box-sizing: border-box; }
     .modal-name { font-size: 20px; font-weight: 900; margin-bottom: 8px; line-height: 1.3; }
     .modal-price { font-size: 24px; font-weight: 900; color: var(--blue); margin-bottom: 16px; }
     .modal-desc { font-size: 14px; color: var(--muted); line-height: 1.6; white-space: pre-wrap; }
+
+    /* Gemini AI 提案UI用スタイル */
+    .btn-ai { width: 100%; border: 1px solid #fbcfe8; background: linear-gradient(135deg, #fdf4ff 0%, #f3e8ff 100%); color: #86198f; font-weight: 800; border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-bottom: 12px; cursor: pointer; box-shadow: 0 4px 6px rgba(253,244,255,0.5); display: flex; align-items: center; justify-content: center; gap: 6px; }
+    .btn-ai:disabled { opacity: 0.6; cursor: not-allowed; }
+    .ai-box { background: #fdf4ff; border: 1px solid #fce7f3; border-radius: 12px; padding: 14px; margin-bottom: 16px; color: #701a75; font-size: 13px; line-height: 1.6; display: none; }
   </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v43 ORDER-LOG</div>
+
+  <!-- オープニングアニメーション（スプラッシュスクリーン） -->
+  <div id="splashScreen">
+    <div class="splash-content">
+      <!-- Gyazoの画像直リンクURLを設定 -->
+      <img src="https://i.gyazo.com/755af392596e7050f5fd7440aa51891c.jpg" alt="BOXMART LOGO" class="splash-logo-img" onerror="this.style.display='none'">
+      <div class="splash-title">BOXMART</div>
+      <div class="splash-subtitle">SMART RETAIL & LOGISTICS</div>
+    </div>
+  </div>
+
+  <div class="build">BUILD TAKEOUT v46 AI-INTEGRATION</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -275,16 +349,34 @@
         <img src="" id="modalImg" class="modal-img" alt="">
         <div class="modal-name" id="modalName"></div>
         <div class="modal-price" id="modalPrice"></div>
-        <div class="modal-desc" id="modalDesc"></div>
-        <div style="height:20px"></div>
-        <button class="btn" onclick="toast('※検証用：カート追加のモックです'); closeItemModal()">カートに追加</button>
+        <div class="modal-desc" id="modalDesc" style="margin-bottom: 12px;"></div>
+
+        <!-- Gemini AI 提案機能 -->
+        <button class="btn-ai" id="aiRecipeBtn">✨ AIに簡単アレンジを聞く</button>
+        <div id="aiRecipeContainer" class="ai-box"></div>
+
+        <div style="height:8px"></div>
+        <button class="btn" id="modalAddBtn">カートに追加</button>
       </div>
     </div>
   </div>
 
   <script>
+    // --- スプラッシュスクリーンの制御 ---
+    window.addEventListener('load', () => {
+      setTimeout(() => {
+        const splash = document.getElementById('splashScreen');
+        if(splash) {
+          splash.classList.add('fade-out');
+        }
+      }, 1500); 
+    });
+
     const MASTER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv";
     const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec";
+
+    // Gemini APIキー設定（環境変数から自動注入される前提）
+    const apiKey = "";
 
     // 商品説明データ
     const productDescriptions = {
@@ -294,7 +386,7 @@
       "青の洞窟 ボロネーゼ(140g)": "イタリアの赤ワインとともにじっくり煮込んだ、挽き肉の旨味引き立つおいしさをお楽しみください。\nレンジでの調理が可能です。",
       "久世福商店 いぶりがっこタルタル 340g": "いぶりがっこを程よい食感にカットし、マヨネーズをベースに久世福自慢の万能だしも加えた和風タルタルソース。\nシンプルに野菜へディップしたり、ソテーしたお肉・お魚料理などにもぴったりです。",
       "ビビンバの素 ビビゴ bibigo": "シャキシャキ食感の6種の豊かな野菜入り具材と、辛さとコクが食欲をそそる特製コチュジャンだれをセットにし、ご飯と混ぜるだけで簡単に韓国本場のビビンバを楽しめる商品です。フライパンで調理するとさらに本格的な味がお楽しみいただけます。",
-      "豚汁用下茹で野菜 500g": "国産野菜（だいこん・にんじん・ごぼう）と、味がしみやすいこんにゃくを組み合わせた豚汁・けんちん汁・お味噌汁などに使いやすい下ゆで野菜ミックスです。",
+      "豚汁用下茹で野菜 500g": "国産野菜（だいこん・にんじん・ごぼう）と、味がしみやすいこんにゃくを組み合わせた豚汁・けんちん汁・お味噌汁などに使いやすい下ゆで野菜ミックスです。\n野菜はすべて下ゆで済みの水煮タイプのため、袋内の水を切ってから鍋に入れて煮込むだけで、下処理やカットの手間を減らすことができ、調理の効率化に役立ちます。\n飲食店様の仕込み作業の簡便化や、ご家庭での調理時間短縮にお役立ていただける商品です。",
       "北海道クラムチャウダー": "北海道産ほたての旨味が味わえる濃厚なポタージュ。着色料・保存料無添加のポタージュです。",
       "北海道濃厚かぼちゃポタージュ": "忙しい朝食のパンのお供や、夕食のパスタ等イタリアンへも○。お湯だけで濃厚に飲める本格派。",
       "北海道濃厚コ-ンポタ-ジュ": "北海道紋別産の糖度14度以上の朝採れとうもろこしをたっぷりと使用した濃厚コーンポタージュです。",
@@ -443,7 +535,7 @@
     let masterIndexLoaded = false;
     let masterMeta = { rows:0, headers:[] };
 
-    
+
     // 発注候補カート
     const orderCart = {};
     function getOrderCartItems(){
@@ -633,6 +725,51 @@
       list.innerHTML = html;
     }
 
+    // ★Gemini API: アレンジレシピ生成処理★
+    async function generateAIRecipe(productName) {
+      const btn = $("aiRecipeBtn");
+      const container = $("aiRecipeContainer");
+
+      btn.disabled = true;
+      btn.innerHTML = "✨ 提案を生成中...";
+      container.style.display = "block";
+      container.innerHTML = "<div style='opacity:0.7'>AIが忙しいあなたにぴったりのアレンジを考えています...</div>";
+
+      // 料理研究家としてのプロンプト（3分以内でできるような超簡単なものを要求）
+      const prompt = `あなたはプロの料理研究家です。忙しい単身のビジネスパーソン向けに、レトルト・缶詰などの商品「${productName}」を使った、調理時間3分以内でできる超簡単で美味しいアレンジレシピ、またはおすすめのちょい足しアイデアを1つ提案してください。親しみやすいトーンで、150文字程度で簡潔にまとめてください。`;
+
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+      const payload = { contents: [{ parts: [{ text: prompt }] }] };
+      const delays = [1000, 2000, 4000, 8000, 16000]; // エクスポネンシャルバックオフの待機時間
+      let resultText = "";
+
+      for (let i = 0; i < 5; i++) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+          if (!res.ok) throw new Error("HTTP Error");
+          const data = await res.json();
+          resultText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (resultText) break;
+        } catch (e) {
+          if (i === 4) {
+            resultText = "通信エラーが発生しました。時間をおいて再度お試しください。";
+            break;
+          }
+          await new Promise(r => setTimeout(r, delays[i]));
+        }
+      }
+
+      // 改行をHTMLタグに変換して表示
+      resultText = resultText.replace(/\n/g, "<br>");
+      container.innerHTML = `<b>✨ AIのおすすめアレンジ:</b><br><div style="margin-top:6px">${resultText}</div>`;
+      btn.innerHTML = "✨ ほかのアレンジも聞く";
+      btn.disabled = false;
+    }
+
     // 商品詳細モーダルの制御
     window.openItemModal = function(code) {
       const it = masterIndex[code];
@@ -654,6 +791,17 @@
       $("modalName").textContent = name;
       $("modalPrice").textContent = "¥" + (it.price || 0).toLocaleString("ja-JP");
       $("modalDesc").textContent = descText;
+
+      // モーダルを開くたびにAIのUIをリセット
+      $("aiRecipeContainer").style.display = "none";
+      $("aiRecipeContainer").innerHTML = "";
+      $("aiRecipeBtn").innerHTML = "✨ AIに簡単アレンジを聞く";
+      $("aiRecipeBtn").onclick = () => generateAIRecipe(name);
+
+      $("modalAddBtn").onclick = () => {
+        addOrderItem(code);
+        closeItemModal();
+      };
 
       $("itemModal").classList.add("show");
     };
@@ -950,7 +1098,7 @@
       }
     };
 
-    
+
     $("clearOrderCartBtn").onclick = ()=> clearOrderCart();
 
     $("submitOrderBtn").onclick = async ()=>{
