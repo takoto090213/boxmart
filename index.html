@@ -8,7 +8,10 @@
     :root{--blue:#2563eb;--bg:#f5f7fb;--card:#fff;--text:#111827;--muted:#6b7280;--border:#e5e7eb;--radius:16px;--shadow:0 8px 24px rgba(17,24,39,.08);} 
     *{box-sizing:border-box}
     body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans JP","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;background:var(--bg);color:var(--text)}
-    .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+
+    /* 下部タブに被らないよう余白を多めに確保（iOSのセーフエリア対応） */
+    .app{max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+
     header{position:sticky;top:0;z-index:50;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
     .brand{font-weight:800;color:var(--blue);letter-spacing:.3px}
     .pill{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--border);background:#fff;color:var(--muted);white-space:nowrap}
@@ -28,8 +31,9 @@
     .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom));z-index:80;background:#111827;color:#fff;padding:10px 12px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;max-width:min(520px, calc(100vw - 24px));width:calc(100vw - 24px)}
     .toast.show{opacity:.92;transform:translateX(-50%) translateY(-6px)}
     nav{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.95);border-top:1px solid var(--border);backdrop-filter:blur(10px);padding:10px 10px calc(10px + env(safe-area-inset-bottom));z-index:70}
-    .tabs{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-    .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 6px;border-radius:14px;border:1px solid transparent;color:var(--muted);font-size:12px;user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
+
+    .tabs{max-width:520px;margin:0 auto;display:grid;grid-template-columns:repeat(5,1fr);gap:4px}
+    .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:8px 4px;border-radius:14px;border:1px solid transparent;color:var(--muted);font-size:11px;user-select:none;-webkit-tap-highlight-color:transparent;cursor:pointer}
     .tab.active{color:var(--blue);border-color:#dbeafe;background:#eff6ff}
     .icon{font-size:18px;line-height:1}
     .scannerWrap{border:1px solid var(--border);border-radius:18px;overflow:hidden;background:#000;position:relative;height:min(56vh, 420px)}
@@ -43,14 +47,39 @@
     .mini{font-size:12px;color:var(--muted)}
     code{background:#f3f4f6;border:1px solid #e5e7eb;padding:1px 6px;border-radius:999px}
     pre{white-space:pre-wrap;word-break:break-word;margin:0}
-  
     .field{display:flex;flex-direction:column;gap:6px;margin:10px 0}
     label{font-size:12px;color:var(--muted);font-weight:700}
     input{width:100%;padding:12px 12px;border-radius:12px;border:1px solid var(--border);font-size:16px}
-</style>
+
+    /* 発注カタログ画面用スタイル */
+    .order-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; padding-bottom: 40px; }
+    .order-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+    /* 画像が途切れないよう object-fit: contain に変更 */
+    .order-img { width: 100%; height: 130px; object-fit: contain; background: #ffffff; display: block; padding: 8px; box-sizing: border-box; }
+    .order-info { padding: 12px; display: flex; flex-direction: column; flex: 1; }
+    .order-name { font-weight: 800; font-size: 14px; margin-bottom: 6px; line-height: 1.3; color: var(--text); }
+    .order-desc { font-size: 11px; color: var(--muted); margin-bottom: 12px; flex: 1; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+    .order-price { font-weight: 900; color: var(--blue); font-size: 16px; }
+    .order-btn { margin-top: 0; padding: 6px 12px; width: auto; border-radius: 8px; font-size: 12px; }
+
+    /* 商品詳細モーダル用スタイル */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: flex-end; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; padding: 0; margin: 0; }
+    .modal-overlay.show { opacity: 1; pointer-events: auto; }
+    .modal-content { background: var(--card); width: 100%; max-width: 520px; max-height: 85vh; border-radius: 24px 24px 0 0; overflow-y: auto; transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); display: flex; flex-direction: column; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+    .modal-overlay.show .modal-content { transform: translateY(0); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); z-index: 10; }
+    .modal-title { font-weight: 800; font-size: 16px; }
+    .modal-close { background: #f3f4f6; border: none; width: 32px; height: 32px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 16px; cursor: pointer; color: var(--muted); }
+    .modal-body { padding: 16px; }
+    /* モーダル内の画像も途切れないよう contain に設定 */
+    .modal-img { width: 100%; height: 240px; object-fit: contain; border-radius: 12px; margin-bottom: 16px; background: #ffffff; padding: 8px; box-sizing: border-box; }
+    .modal-name { font-size: 20px; font-weight: 900; margin-bottom: 8px; line-height: 1.3; }
+    .modal-price { font-size: 24px; font-weight: 900; color: var(--blue); margin-bottom: 16px; }
+    .modal-desc { font-size: 14px; color: var(--muted); line-height: 1.6; white-space: pre-wrap; }
+  </style>
 </head>
 <body>
-  <div class="build">BUILD TAKEOUT v36 GAS-URL-FIX</div>
+  <div class="build">BUILD TAKEOUT v42 SAVE-ZXING-FIX</div>
   <div class="toast" id="toast"></div>
 
   <div class="app">
@@ -62,6 +91,7 @@
     <main>
       <section id="screen-home">
         <div class="h1">現在の状況</div>
+
         <div class="card">
           <div class="row">
             <div>
@@ -75,6 +105,17 @@
         </div>
 
         <div class="card">
+          <div class="row">
+            <div>
+              <div style="font-weight:900">商品の発注・カタログ</div>
+              <div class="muted">BOXMARTで取り扱う商品を確認・発注します</div>
+            </div>
+          </div>
+          <div style="height:10px"></div>
+          <button class="btn secondary" id="goOrder"><span style="font-size:18px;line-height:1">📦</span>発注カタログを見る<span style="margin-left:auto">→</span></button>
+        </div>
+
+        <div class="card">
           <div class="row" style="margin-bottom:8px">
             <div>
               <div style="font-weight:900">マスタ参照</div>
@@ -82,7 +123,7 @@
             </div>
             <div class="pill warn" id="masterPill">未読込</div>
           </div>
-          <div class="muted">CSV: <code id="masterUrl">https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv</code></div>
+          <div class="muted">CSV: <code id="masterUrl"></code></div>
           <div style="height:10px"></div>
           <button class="btn secondary small" id="loadMasterBtn">マスタを読み込む</button>
         </div>
@@ -132,58 +173,67 @@
         </div>
       </section>
 
+      <section id="screen-order" style="display:none">
+        <div class="h1">発注カタログ</div>
+        <div class="muted" style="margin: 0 2px 16px;">BOXMARTへ補充したい商品を選んで追加できます。</div>
+
+        <div class="order-grid" id="orderList">
+          <div class="muted" style="grid-column: span 2; text-align: center; padding: 20px;">マスタを読み込んでください</div>
+        </div>
+      </section>
+
       <section id="screen-next" style="display:none">
         <div class="h1">次回便</div>
         <div class="card"><div class="muted">（後で実装）</div></div>
       </section>
 
       <section id="screen-settings" style="display:none">
-  <div class="h1">設定</div>
+        <div class="h1">設定</div>
 
-  <div class="card">
-    <div style="font-weight:900;margin-bottom:6px">アカウント情報</div>
-    <div class="muted">ここで入力した内容は、この端末のブラウザに保存され、購入確定ログに一緒に送られます。入力例はすべて架空の情報です。</div>
+        <div class="card">
+          <div style="font-weight:900;margin-bottom:6px">アカウント情報</div>
+          <div class="muted">ここで入力した内容は、この端末のブラウザに保存され、購入確定ログに一緒に送られます。入力例はすべて架空の情報です。</div>
 
-    <div class="field">
-      <label>名前（account_name）</label>
-      <input id="in_name" placeholder="例）山田 太郎"/>
-    </div>
-    <div class="field">
-      <label>郵便番号（account_zip）</label>
-      <input id="in_zip" placeholder="例）123-4567"/>
-    </div>
-    <div class="field">
-      <label>住所（account_address）</label>
-      <input id="in_addr" placeholder="例）東京都千代田区1-2-3"/>
-    </div>
-    <div class="field">
-      <label>電話番号（account_phone）</label>
-      <input id="in_phone" placeholder="例）090-1234-5678"/>
-    </div>
+          <div class="field">
+            <label>名前（account_name）</label>
+            <input id="in_name" placeholder="例）山田 太郎"/>
+          </div>
+          <div class="field">
+            <label>郵便番号（account_zip）</label>
+            <input id="in_zip" placeholder="例）123-4567"/>
+          </div>
+          <div class="field">
+            <label>住所（account_address）</label>
+            <input id="in_addr" placeholder="例）東京都千代田区1-2-3"/>
+          </div>
+          <div class="field">
+            <label>電話番号（account_phone）</label>
+            <input id="in_phone" placeholder="例）090-1234-5678"/>
+          </div>
 
-    <div class="row">
-      <button class="btn small" id="saveAcct">保存</button>
-      <button class="btn secondary small" id="clearAcct">消去</button>
-    </div>
-  </div>
+          <div class="row">
+            <button class="btn small" id="saveAcct">保存</button>
+            <button class="btn secondary small" id="clearAcct">消去</button>
+          </div>
+        </div>
 
-  <div class="card">
-    <div class="row" style="margin-bottom:10px">
-      <div>
-        <div style="font-weight:900">診断</div>
-        <div class="muted">読み取り方式 / ライブラリ状態</div>
-      </div>
-      <button class="btn secondary small" id="dbgBtn">状態表示</button>
-    </div>
-    <div class="muted"><pre id="dbgText">-</pre></div>
-  </div>
+        <div class="card">
+          <div class="row" style="margin-bottom:10px">
+            <div>
+              <div style="font-weight:900">診断</div>
+              <div class="muted">読み取り方式 / ライブラリ状態</div>
+            </div>
+            <button class="btn secondary small" id="dbgBtn">状態表示</button>
+          </div>
+          <div class="muted"><pre id="dbgText">-</pre></div>
+        </div>
 
-  <div class="card">
-    <div style="font-weight:900;margin-bottom:6px">接続先</div>
-    <div class="muted">GAS: <code>https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec</code></div>
-    <div class="muted">Master CSV: <code>https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv</code></div>
-  </div>
-</section>
+        <div class="card">
+          <div style="font-weight:900;margin-bottom:6px">接続先</div>
+          <div class="muted">GAS: <code>https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec</code></div>
+          <div class="muted">Master CSV: <code>https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv</code></div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -191,14 +241,67 @@
     <div class="tabs">
       <div class="tab active" data-tab="home"><div class="icon">🏠</div><div>ホーム</div></div>
       <div class="tab" data-tab="takeout"><div class="icon">🛍️</div><div>持ち出し</div></div>
+      <div class="tab" data-tab="order"><div class="icon">📦</div><div>発注</div></div>
       <div class="tab" data-tab="next"><div class="icon">🚚</div><div>次回便</div></div>
       <div class="tab" data-tab="settings"><div class="icon">⚙️</div><div>設定</div></div>
     </div>
   </nav>
 
+  <!-- 商品詳細モーダル -->
+  <div class="modal-overlay" id="itemModal" onclick="if(event.target===this) closeItemModal()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-title">商品詳細</div>
+        <button class="modal-close" onclick="closeItemModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <img src="" id="modalImg" class="modal-img" alt="">
+        <div class="modal-name" id="modalName"></div>
+        <div class="modal-price" id="modalPrice"></div>
+        <div class="modal-desc" id="modalDesc"></div>
+        <div style="height:20px"></div>
+        <button class="btn" onclick="toast('※検証用：カート追加のモックです'); closeItemModal()">カートに追加</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const MASTER_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vT0jwJEWW07dZhnR-eDB4ogwN_BtMZ5t-D0xpDWDM3ppxvlHse65gcF7LLUkOg1zap-mg2w6DcuJ6zu/pub?gid=635745811&single=true&output=csv";
     const GAS_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbzrqYKZKTopeXvvnL_cqARZMWr1gXR3k0Ea9Kng3TKQL2MQy3U18hI2Jhy5KZzqt253/exec";
+
+    // 商品説明データ
+    const productDescriptions = {
+      "おいしい缶詰牛肉のデミグラスソース味": "牛肉を赤ワインの風味を効かせた特製デミグラスソースでやわらかく仕上げました。具材もソースもおいしい一品です。",
+      "おいしい缶詰日本近海育ちのオイルサーディン": "日本近海で獲れたいわしを丁寧に一尾ずつ手詰めしました。いわしの風味が生きるよう、まろやかな綿実油に漬けています。",
+      "びらとり和牛カレー（中辛）": "北海道・平取町。凍てつく冬の寒さを乗り越え、肉の旨味が凝縮されたびらとり和牛の多くはＡ－５ランクに格付けされ、通もうならせる逸品。味わい豊かな至極のビーフカレーをぜひ一度。",
+      "青の洞窟 ボロネーゼ(140g)": "イタリアの赤ワインとともにじっくり煮込んだ、挽き肉の旨味引き立つおいしさをお楽しみください。\nレンジでの調理が可能です。",
+      "久世福商店 いぶりがっこタルタル 340g": "いぶりがっこを程よい食感にカットし、マヨネーズをベースに久世福自慢の万能だしも加えた和風タルタルソース。\nシンプルに野菜へディップしたり、ソテーしたお肉・お魚料理などにもぴったりです。",
+      "ビビンバの素 ビビゴ bibigo": "シャキシャキ食感の6種の豊かな野菜入り具材と、辛さとコクが食欲をそそる特製コチュジャンだれをセットにし、ご飯と混ぜるだけで簡単に韓国本場のビビンバを楽しめる商品です。フライパンで調理するとさらに本格的な味がお楽しみいただけます。",
+      "豚汁用下茹で野菜 500g": "国産野菜（だいこん・にんじん・ごぼう）と、味がしみやすいこんにゃくを組み合わせた豚汁・けんちん汁・お味噌汁などに使いやすい下ゆで野菜ミックスです。",
+      "北海道クラムチャウダー": "北海道産ほたての旨味が味わえる濃厚なポタージュ。着色料・保存料無添加のポタージュです。",
+      "北海道濃厚かぼちゃポタージュ": "忙しい朝食のパンのお供や、夕食のパスタ等イタリアンへも○。お湯だけで濃厚に飲める本格派。",
+      "北海道濃厚コ-ンポタ-ジュ": "北海道紋別産の糖度14度以上の朝採れとうもろこしをたっぷりと使用した濃厚コーンポタージュです。",
+      "北海道牛肉ステーキ　ガーリックペッパー仕立て": "やわらかな北海道産の牛肉と皮付きのポテトが入った食べ応えのある一品。",
+      "卵カスタードプリン": "国産卵黄を使用した、なめらかなカスタードプリンです。",
+      "北海道パンプキンプリン": "口の中でふんわりなめらかにとける、北海道の美味しさがつまったプリンです。"
+    };
+
+    // 商品画像データ
+    const productImages = {
+      "おいしい缶詰牛肉のデミグラスソース味": "https://delicious-canned.com/cms/wp-content/uploads/2017/02/002-1-575x560.jpg",
+      "おいしい缶詰日本近海育ちのオイルサーディン": "https://delicious-canned.com/cms/wp-content/uploads/2017/02/022-1-401x560.jpg",
+      "びらとり和牛カレー（中辛）": "https://tshop.r10s.jp/koukyourin/cabinet/00789960/curry46.jpg?_ex=300x300&s=0&r=1",
+      "青の洞窟 ボロネーゼ(140g)": "https://www.nisshin-seifun-welna.com/index/products/product_file/file/4902110266535.jpg",
+      "久世福商店 いぶりがっこタルタル 340g": "https://prcdn.freetls.fastly.net/release_image/158568/84/158568-84-859147ec8784df3bf006b04a4210fc5a-1024x1024.jpg?width=1950&height=1350&quality=85%2C65&format=jpeg&auto=webp&fit=bounds&bg-color=fff",
+      "ビビンバの素 ビビゴ bibigo": "https://cjfoodsjapan.net/product/img/p57_20240902.jpg",
+      "豚汁用下茹で野菜 500g": "https://costcotuu.com/wp-content/uploads/2025/05/tonjiru-kenchinjiru-no-gu03-768x768.jpg",
+      "北海道クラムチャウダー": "https://shop.r10s.jp/hokkaidogb/cabinet/item_img0004/g13040a.jpg",
+      "北海道濃厚かぼちゃポタージュ": "https://hokkaidoibuki.web-store.jp/themes/simple_02/p/images/kv_00095.jpg",
+      "北海道濃厚コ-ンポタ-ジュ": "https://www.paulista.co.jp/upload/save_image/0516193056_6645e0605a969.jpg",
+      "北海道牛肉ステーキ　ガーリックペッパー仕立て": "https://dishandbowl.jp/cdn/shop/files/7807650d492bd091a081ed0233cebd21.jpg?v=1764726645",
+      "卵カスタードプリン": "https://baseec-img-mng.akamaized.net/images/item/origin/d8c2d5b768935251ae914e95fb07ba07.jpg?imformat=generic&q=90&im=Resize,width=640,type=normal",
+      "北海道パンプキンプリン": "https://image.rakuten.co.jp/antel-store/cabinet/kodawaripurin202003s.jpg"
+    };
 
     const $ = (id)=>document.getElementById(id);
     const toastEl = $("toast");
@@ -232,7 +335,7 @@
     function refreshAccountUI(){
       const a = loadAccount();
       const nameEl = document.getElementById("in_name");
-      if(!nameEl) return; // not on settings
+      if(!nameEl) return; 
       nameEl.value = a.account_name || "";
       document.getElementById("in_zip").value = a.account_zip || "";
       document.getElementById("in_addr").value = a.account_address || "";
@@ -246,20 +349,52 @@
     }
 
     function showScreen(name){
-      ["home","takeout","next","settings"].forEach(s=>{
+      ["home","takeout","order","next","settings"].forEach(s=>{
         $("screen-"+s).style.display = (s===name) ? "" : "none";
       });
       document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===name));
       if(name!=="takeout") stopCamera();
-          if(name==="settings") refreshAccountUI();
-}
+      if(name==="settings") refreshAccountUI();
+      if(name==="order") renderOrderList();
+    }
     document.querySelectorAll(".tab").forEach(t=>t.addEventListener("click", ()=>showScreen(t.dataset.tab)));
+
     $("goTakeout").onclick = async ()=>{
       if(!masterIndexLoaded) toast("マスタ未読込（SKUのみ表示になります）");
       showScreen("takeout");
     };
 
-    // CSV parser (quoted commas対応)
+    $("goOrder").onclick = ()=>showScreen("order");
+
+    // 保存/消去ボタン復活
+    $("saveAcct").onclick = ()=>{
+      try{
+        const a = {
+          account_name: ($("in_name")?.value || "").trim(),
+          account_zip: ($("in_zip")?.value || "").trim(),
+          account_address: ($("in_addr")?.value || "").trim(),
+          account_phone: ($("in_phone")?.value || "").trim()
+        };
+        saveAccount(a);
+        refreshAccountUI();
+        toast("保存しました");
+      }catch(e){
+        console.error(e);
+        toast("保存できませんでした");
+      }
+    };
+    $("clearAcct").onclick = ()=>{
+      try{
+        saveAccount({});
+        refreshAccountUI();
+        toast("消去しました");
+      }catch(e){
+        console.error(e);
+        toast("消去できませんでした");
+      }
+    };
+
+    // CSV parser
     function parseCSV(text){
       const rows=[];
       let i=0, field="", row=[];
@@ -287,7 +422,7 @@
     }
 
     // master index
-    let masterIndex = {}; // key: code_number -> {name, price, exp}
+    let masterIndex = {}; 
     let masterIndexLoaded = false;
     let masterMeta = { rows:0, headers:[] };
 
@@ -321,6 +456,9 @@
         let cName = idx(["商品名","name","product","product_name"]);
         let cPrice = idx(["販売価格","価格","price","sell_price"]);
         let cExp = idx(["賞味期限","期限","exp","expiry","expiration"]);
+        let cImg = idx(["画像","画像URL","image","img","url","picture"]);
+        let cDesc = idx(["説明","商品説明","詳細","desc","description","detail"]);
+
         if(cCode<0) cCode = 0;
         if(cName<0) cName = 1;
         if(cPrice<0) cPrice = 2;
@@ -335,7 +473,9 @@
             code,
             name: String(row[cName]||"").trim(),
             price: parsePrice(row[cPrice]),
-            exp: String(row[cExp]||"").trim()
+            exp: String(row[cExp]||"").trim(),
+            img: cImg >= 0 ? String(row[cImg]||"").trim() : "",
+            desc: cDesc >= 0 ? String(row[cDesc]||"").trim() : ""
           };
         }
         masterIndex = index;
@@ -343,8 +483,10 @@
         masterMeta.rows = Object.keys(index).length;
         setPill("masterPill",`読込OK (${masterMeta.rows})`,"ok");
         toast("マスタ読み込み完了");
+
         enrichPicked();
         renderList();
+        renderOrderList();
       } catch(e){
         masterIndexLoaded = false;
         setPill("masterPill","読込失敗","bad");
@@ -354,6 +496,85 @@
 
     $("loadMasterBtn").onclick = loadMaster;
     $("masterUrl").textContent = MASTER_CSV_URL;
+
+    // --- 発注カタログのレンダリング ---
+    function renderOrderList() {
+      const list = $("orderList");
+      if(!masterIndexLoaded){
+        list.innerHTML = '<div class="muted" style="grid-column: span 2; text-align: center; padding: 20px;">マスタを読み込んでください</div>';
+        return;
+      }
+
+      const items = Object.values(masterIndex);
+      if(items.length === 0){
+        list.innerHTML = '<div class="muted" style="grid-column: span 2; text-align: center; padding: 20px;">商品データがありません</div>';
+        return;
+      }
+
+      let html = "";
+      const seenNames = new Set();
+
+      items.forEach(it => {
+        const name = it.name || "名称未設定";
+
+        if (seenNames.has(name)) return;
+        seenNames.add(name);
+
+        let imgSrc = it.img;
+        if (!imgSrc) {
+          imgSrc = productImages[name] || "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image";
+        }
+
+        let descText = it.desc;
+        if (!descText) {
+          descText = productDescriptions[name] || "美味しいご当地商品です。お酒のおつまみや、小腹が空いた時にぴったり。防災備蓄にも最適です。";
+        }
+
+        html += `
+          <div class="order-card" onclick="openItemModal('${it.code}')" style="cursor:pointer">
+            <img src="${imgSrc}" class="order-img" alt="${name}" loading="lazy">
+            <div class="order-info">
+              <div class="order-name">${name}</div>
+              <div class="order-desc">${descText}</div>
+              <div style="margin-top:auto; display:flex; align-items:center; justify-content:space-between;">
+                <div class="order-price">¥${it.price.toLocaleString("ja-JP")}</div>
+                <button class="btn small order-btn" onclick="event.stopPropagation(); toast('※検証用：カート追加のモックです')">追加</button>
+              </div>
+            </div>
+          </div>
+        `;
+      });
+      list.innerHTML = html;
+    }
+
+    // 商品詳細モーダルの制御
+    window.openItemModal = function(code) {
+      const it = masterIndex[code];
+      if(!it) return;
+
+      const name = it.name || "名称未設定";
+
+      let imgSrc = it.img;
+      if (!imgSrc) {
+        imgSrc = productImages[name] || "https://placehold.co/400x300/e2e8f0/64748b?text=No+Image";
+      }
+
+      let descText = it.desc;
+      if (!descText) {
+        descText = productDescriptions[name] || "美味しいご当地商品です。お酒のおつまみや、小腹が空いた時にぴったり。防災備蓄にも最適です。";
+      }
+
+      $("modalImg").src = imgSrc;
+      $("modalName").textContent = name;
+      $("modalPrice").textContent = "¥" + (it.price || 0).toLocaleString("ja-JP");
+      $("modalDesc").textContent = descText;
+
+      $("itemModal").classList.add("show");
+    };
+
+    window.closeItemModal = function() {
+      $("itemModal").classList.remove("show");
+    };
 
     // QR parsing
     function parseBoxmart(raw){
@@ -369,7 +590,7 @@
 
     // picked list
     const picked = [];
-    const pickedSet = new Set();
+    let pickedSet = new Set();
 
     function enrichOne(it){
       if(!masterIndexLoaded) return it;
@@ -459,6 +680,12 @@
 
     async function stopCamera(){
       try{ if(loopTimer){ clearTimeout(loopTimer); loopTimer=null; } }catch(e){}
+      try{
+        if(zxingReader && zxingReader.reset){
+          zxingReader.reset();
+        }
+      }catch(e){}
+      zxingReader = null;
       try{
         const v = $("nativeVideo");
         v.pause();
@@ -585,33 +812,13 @@
     $("confirmBtn").onclick = async ()=>{
       if(picked.length===0){ toast("まだ0点です"); return; }
 
-      // 送信ペイロード（GAS doPost想定）
-      const payload = {
-        type: "takeout_confirm",
-        mode: "takeout",
-        note: "boxmart",
-        // 1件ずつの明細（SKU/SIG + マスタ参照の結果）
-        items: picked.map(p=>({
-          item_id: (p.item_id || p.itemId || (p.raw ? (parseBoxmart(p.raw)?.item_id || "") : "") || ""),
-          sig: p.sig || "",
-          name: p.master?.name || p.name || "",
-          price: Number(p.master?.price ?? p.price ?? 0) || 0,
-          exp: p.master?.exp || p.exp || ""
-        })),
-        sum: picked.reduce((acc,p)=> acc + (Number(p.master?.price ?? p.price ?? 0) || 0), 0),
-        ua: navigator.userAgent || "",
-        url: location.href || ""
-      };
-
       const btn = $("confirmBtn");
-      const prev = btn.textContent;
       btn.disabled = true;
       btn.textContent = "送信中...";
       toast("購入確定を送信しています…");
 
       try{
-        const sum = picked.reduce((acc,p)=> acc + (Number(p.master?.price ?? p.price ?? 0) || 0), 0);
-        // 既存のGAS（1行=1イベント）に合わせて「1商品=1POST」で送る
+        const sum = picked.reduce((acc,p)=> acc + (Number(p.price ?? 0) || 0), 0);
         for(let i=0;i<picked.length;i++){
           const p = picked[i];
           const a = loadAccount();
@@ -622,7 +829,6 @@
             mode: "takeout",
             screen: "takeout_confirm",
             userId: getUserId(),
-            // account_* は空で送り、GAS側の note フォールバックで復元させる
             account_name: "",
             account_zip: "",
             account_address: "",
@@ -646,7 +852,6 @@
         }
 
         toast("送信しました（シート反映を確認してください）");
-        // クリア
         picked.length = 0;
         pickedSet = new Set();
         renderList();
@@ -654,7 +859,6 @@
         console.error(err);
         toast("送信に失敗しました（通信/URLを確認）");
       }finally{
-        btn.textContent = prev;
         btn.disabled = (picked.length===0);
         btn.textContent = `購入確定（${picked.length}点）`;
       }
@@ -678,6 +882,7 @@
     renderList();
     updateCounts();
     setPill("statusPill","準備完了","ok");
+    refreshAccountUI();
 
     // auto-load master
     loadMaster();
